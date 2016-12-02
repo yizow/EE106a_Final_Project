@@ -32,33 +32,37 @@ class MainLoop(cmd.Cmd):
   def do_move(self, line):
     """Moves a grabbed cup to pouring position.
     """
-    assert line == ""
     self.report("moving")
 
   def do_pour(self, line):
     """Pours a grabbed cup.
     """
-    assert line == ""
     self.report("pouring")
 
   def do_return(self, line):
     """Returns a grabbed cup to its original position.
     """
-    assert line == ""
     self.report("returning")
 
   def do_release(self, line):
-    assert line == ""
+    """Releases a cup and return Baxter to starting position.
+    """
     self.grabbed_cup = None
     self.report("releasing")
 
   def do_quit(self, line):
+    """End with quit, exit, or ctrl-d
+    """
     return self.do_EOF(line)
 
   def do_exit(self, line):
+    """End with quit, exit, or ctrl-d
+    """
     return self.do_EOF(line)
 
   def do_EOF(self, line):
+    """End with quit, exit, or ctrl-d
+    """
     return True
 
   def report(self, action):
