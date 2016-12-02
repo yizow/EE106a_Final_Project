@@ -1,5 +1,6 @@
 # Grams will be the standard unit.
 
+import time
 import usb.core
 
 VENDOR_ID = 0x0922

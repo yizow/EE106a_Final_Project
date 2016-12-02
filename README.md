@@ -14,3 +14,10 @@ I assume you already have ROS setup
   * Feel free to use ssh to clone if you have ssh-keys setup.
 5. `cd ~/ee106a_final/`
 6. `catkin_make`
+
+# Boba Bot Usage
+LAUNCH FILES WOO
+
+1. Source devel/setup.sh
+2. roslaunch boba_bot boba_bot.launch
+3. A new terminal will automatically open, waiting for Baxter commands.
