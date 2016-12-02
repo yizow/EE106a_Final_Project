@@ -2,7 +2,6 @@
 
 import time
 import usb.core
-import usb.util
 
 import rospy
 from std_msgs.msg import Float32
@@ -19,16 +18,19 @@ def read_scale(device, endpoint):
   4: Value. Either ounces, or grams. Dont forget to scale.
   5: Value. Higher byte. Total weight is Byte 5 * 256 + Byte 4
   """
-  try:
-    data = device.read(endpoint.bEndpointAddress,
-                       endpoint.wMaxPacketSize)
-    return data
-  except usb.core.USBError as e:
-    data = None
-    if e.args == ('Operation timed out',):
-      print("s")
-      print e.args
-      raise e
+  def read_scale_helper(req):
+    if device is None:
+      return get_scale_weightResponse(Float32(3.14159))
+    try:
+      data = device.read(endpoint.bEndpointAddress,
+                         endpoint.wMaxPacketSize)
+      return get_scale_weightResponse(parse_scale(data))
+    except usb.core.USBError as e:
+      data = None
+      if e.args == ('Operation timed out',):
+        print e.args
+        raise e
+  return read_scale_helper
 
 def parse_scale(reading):
   """Converts a scale reading to a float representing the weight in grams.
@@ -38,20 +40,16 @@ def parse_scale(reading):
   if ounce_mode:
     value *= 2.83495
   # Scale can only achieve .1 gram precision
-  return value * 10 // 10
+  return Float32(value * 10 // 10)
 
 def main():
-  pub = rospy.Publisher(SCALE_TOPIC, Float32, queue_size=10)
-  rospy.init_node(SCALE_NODE)
-
   device, endpoint = init_scale()
 
-  # We're not rate limiting since USB protocol itself is rate limited
-  while not rospy.is_shutdown():
-    data = read_scale(device, endpoint)
-    if data is not None:
-      pub.publish(parse_scale(data))
+  server = rospy.Service(SCALE_SERVICE, get_scale_weight, read_scale(device, endpoint))
+  rospy.init_node(SCALE_SERVICE_NODE)
 
+  print("Ready to service")
+  rospy.spin()
 
 if __name__ == '__main__':
   main()

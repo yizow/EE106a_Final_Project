@@ -18,6 +18,10 @@ class MainLoop(cmd.Cmd):
     """Executes only once, before commands are interpreted.
     """
     rospy.init_node(MAIN_NODE)
+
+    rospy.wait_for_service(SCALE_SERVICE)
+    self.get_weight = rospy.ServiceProxy(SCALE_SERVICE, get_scale_weight)
+
     self.grabbed_cup = None
 
   def do_grab(self, cup):
@@ -38,6 +42,8 @@ class MainLoop(cmd.Cmd):
     """Pours a grabbed cup.
     """
     self.report("pouring")
+    response = self.get_weight()
+    print("weight: {}".format(response.weight.data))
 
   def do_return(self, line):
     """Returns a grabbed cup to its original position.
