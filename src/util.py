@@ -3,6 +3,8 @@
 import time
 import usb.core
 
+from boba_bot.srv import *
+
 VENDOR_ID = 0x0922
 PRODUCT_ID = 0x8003
 
@@ -17,23 +19,28 @@ MAIN_NODE = "boba_bot"
 def init_scale():
   """Sets up and returns a (device, endpoint) representing the USB scale.
   """
-  device = None
-  while device is None:
+  device, endpoint = None, None
+  for _ in range(10):
     device = usb.core.find(idVendor=VENDOR_ID, idProduct=PRODUCT_ID)
-    if device is None:
+    if device is not None:
+      break
+    else:
       print("No scale detected")
       time.sleep(1)
-  print("scale found")
-  for cfg in device:
-    for intf in cfg:
-      if device.is_kernel_driver_active(intf.bInterfaceNumber):
-        try:
-          device.detach_kernel_driver(intf.bInterfaceNumber)
-        except usb.core.USBError as e:
-          sys.exit("Could not detatch kernel driver from interface({0}): {1}".format(intf.bInterfaceNumber, str(e)))
+  if device is None:
+    print("Giving up; making up fake weights")
+  else:
+    print("scale found")
+    for cfg in device:
+      for intf in cfg:
+        if device.is_kernel_driver_active(intf.bInterfaceNumber):
+          try:
+            device.detach_kernel_driver(intf.bInterfaceNumber)
+          except usb.core.USBError as e:
+            sys.exit("Could not detatch kernel driver from interface({0}): {1}".format(intf.bInterfaceNumber, str(e)))
 
-  device.set_configuration()
+    device.set_configuration()
 
-  endpoint = device[0][(0, 0)][0]
+    endpoint = device[0][(0, 0)][0]
 
   return device, endpoint

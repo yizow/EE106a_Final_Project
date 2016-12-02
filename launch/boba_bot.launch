@@ -1,4 +1,4 @@
 <launch>
-  <node pkg="boba_bot" type="read_scale.py" name="scale"/>
-  <node pkg="boba_bot" type="boba_bot.py" name="boba_bot" launch-prefix="gnome-terminal -x"/>
+  <node pkg="boba_bot" type="read_scale.py" name="scale" output="screen"/>
+  <node pkg="boba_bot" type="boba_bot_node.py" name="boba_bot" launch-prefix="gnome-terminal -x"/>
 </launch>
