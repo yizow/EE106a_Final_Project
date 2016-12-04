@@ -20,7 +20,7 @@ def init_scale():
   """Sets up and returns a (device, endpoint) representing the USB scale.
   """
   device, endpoint = None, None
-  for _ in range(10):
+  for _ in range(1):
     device = usb.core.find(idVendor=VENDOR_ID, idProduct=PRODUCT_ID)
     if device is not None:
       break
