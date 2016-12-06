@@ -12,7 +12,7 @@ last_seen = time.time()
 import tf
 
 global ar_markers
-  
+
 def listener(tf_topic):
     #sets up listener to the TF topic, which listens to TF Messages, and calls a callback
 
@@ -32,7 +32,7 @@ def callback(data):
     global last_seen
     global trans
     global rot
-    
+
     tim = data.transforms[0]
     frame_id = tim.header.frame_id
     child_frame = tim.child_frame_id
@@ -41,14 +41,14 @@ def callback(data):
     tim = tim.header.stamp
 
     if child_frame in ar_markers and frame_id == "/head_camera":
-	print frame_id 
+    print frame_id
         now = rospy.Time.now()
         try:
             print "orig vals"
             print(data)
 
             ndata = data
-            ndata.transforms[0].transform.translation.x = -translations.x
+            ndata.transforms[0].transform.translation.x = -tftranslations.x
             ndata.transforms[0].transform.translation.y = -translations.y
             ndata.transforms[0].transform.rotation.x = -quaternion.x
             ndata.transforms[0].transform.rotation.y = -quaternion.y
@@ -62,7 +62,7 @@ def callback(data):
             pass
 
         br = tf.TransformBroadcaster()
-        br.sendTransform((ndata.transforms[0].transform.translation.x, ndata.transforms[0].transform.translation.y, ndata.transforms[0].transform.translation.z), 
+        br.sendTransform((ndata.transforms[0].transform.translation.x, ndata.transforms[0].transform.translation.y, ndata.transforms[0].transform.translation.z),
         (quaternion.x, quaternion.y, quaternion.z, quaternion.w), 
         rospy.Time.now(),
         child_frame + "/corrected", "/head_camera")

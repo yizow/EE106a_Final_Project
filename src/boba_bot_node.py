@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 import cmd
-import time 
+import time
 import rospy
 
 from std_msgs.msg import Float32
@@ -10,10 +10,10 @@ from conf import ingredient_list, menu_list
 from util import *
 CORRECTED_KEYWORD = "/corrected"
 
-""" Ingredients """ 
+""" Ingredients """
 
 ar_markers = []
-ingredients = {} 
+ingredients = {}
 
 class Ingredient():
   def __init__(self, name, ar_tag):
@@ -51,15 +51,15 @@ def tf_callback(data):
       if frame_id == "/head_camera" and child_frame.find(CORRECTED_KEYWORD) > 0:
         ing = ar_to_ingredient(child_frame)
         if not ing:
-    	  return 
+          return
         trans = data.transforms[0].transform
         ing.last_seen_head = time.time()
         ing.position_head = (trans.translation.x, trans.translation.y, trans.translation.z)
         ing.quad_head = (trans.rotation.x, trans.rotation.y, trans.rotation.z)
-      if frame_id == "/left_hand_camera":     
+      if frame_id == "/left_hand_camera":
         ing = ar_to_ingredient(child_frame)
         if not ing:
-  	  return 
+          return
         trans = data.transforms[0].transform
         ing.last_seen_left_arm = time.time()
         ing.position_left_arm = (trans.translation.x, trans.translation.y, trans.translation.z)
@@ -84,7 +84,7 @@ class MainLoop(cmd.Cmd):
     rospy.Subscriber("/tf", TFMessage, tf_callback)
     setup_ingredients()
     self.grabbed_cup = None
-  
+
   def do_show_head_ingredients(self, line):
     """Displays all ingredients seen by head_camera
     """
@@ -96,7 +96,7 @@ class MainLoop(cmd.Cmd):
 								     ingredient.position_head[1], 
 							             ingredient.position_head[2]))  
       else:
-        print(ingredient.name + " is not found") 
+        print(ingredient.name + " is not found")
 
   def do_show_arm_ingredients(self, line):
     """Displays all ingredients seen by arm_camera
