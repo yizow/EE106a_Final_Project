@@ -140,13 +140,15 @@ class MainLoop(cmd.Cmd):
     self.left_arm.set_planning_time(10)
     self.right_arm.set_planner_id('RRTConnectkConfigDefault')
     self.right_arm.set_planning_time(10)
+    self.movebase()
 
+  def movebase(self):
     #move arm to base position away from cameras
     #base_location = [.22,.88,.5]
-    base_location = [.08, 1.3, .4]
+    base_location = [.6, 1.2, .34]
     base_plan = self.plan_path(self.left_arm, base_location, [0,0,0])
     while not self.left_arm.execute(base_plan):
-      base_plan = self.plan_path(self.left_arm, base_location+[.1*np.random.random(), 0 , .1*numpy.random.random()], [0,0,0])
+      base_plan = self.plan_path(self.left_arm, base_location+[.1*np.random.random(), 0 , .1*np.random.random()], [0,0,0])
 
 
   def convert_to_base(self, rbt, ingredient_position):
@@ -301,7 +303,7 @@ class MainLoop(cmd.Cmd):
     self.report("pouring")
     response = self.get_weight()
     print("weight: {}".format(response.weight.data))
-    self.pour(.5)
+    #self.pour(.5)
 
   def do_return(self, line):
     """Returns a grabbed cup to its original position.
