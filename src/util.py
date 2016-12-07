@@ -1,7 +1,7 @@
 # Grams will be the standard unit.
 
 import time
-#import usb.core
+import usb.core
 
 from boba_bot.srv import *
 
@@ -15,6 +15,9 @@ SCALE_SERVICE = "scale_readings_service"
 SCALE_SERVICE_NODE = "scale_reader_server"
 
 MAIN_NODE = "boba_bot"
+
+CUP_WIDTH = .0975
+CUP_HEIGHT = .1
 
 def init_scale():
   """Sets up and returns a (device, endpoint) representing the USB scale.
