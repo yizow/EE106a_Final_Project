@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 import cmd
-import time 
+import time
 import rospy
 import tf
 import tf2_ros
@@ -21,10 +21,10 @@ from conf import ingredient_list, menu_list
 from util import *
 CORRECTED_KEYWORD = "/corrected"
 
-""" Ingredients """ 
+""" Ingredients """
 
 ar_markers = []
-ingredients = {} 
+ingredients = {}
 
 class Ingredient():
   def __init__(self, name, ar_tag):
@@ -63,16 +63,16 @@ def tf_callback(data):
       if frame_id == "/head_camera" and child_frame.find(CORRECTED_KEYWORD) > 0:
         ing = ar_to_ingredient(child_frame)
         if not ing:
-    	  return 
+          return
         trans = data.transforms[0].transform
         ing.last_seen_head = time.time()
         ing.position_head = (trans.translation.x, trans.translation.y, trans.translation.z)
         ing.quad_head = (trans.rotation.x, trans.rotation.y, trans.rotation.z)
         ing.raw = transform
-      if frame_id == "/left_hand_camera":     
+      if frame_id == "/left_hand_camera":
         ing = ar_to_ingredient(child_frame)
         if not ing:
-  	  return 
+          return
         trans = data.transforms[0].transform
         ing.last_seen_left_arm = time.time()
         ing.position_left_arm = (trans.translation.x, trans.translation.y, trans.translation.z)
@@ -172,7 +172,7 @@ class MainLoop(cmd.Cmd):
       	print base_coord
         print(ingredient.name + " is located at ({}, {}, {})".format(*[base_coord[i] for i in range(3)]))  
       else:
-        print(ingredient.name + " is not found") 
+        print(ingredient.name + " is not found")
 
   def do_show_arm_ingredients(self, line):
     """Displays all ingredients seen by arm_camera
