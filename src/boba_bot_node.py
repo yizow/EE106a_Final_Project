@@ -97,6 +97,8 @@ class MainLoop(cmd.Cmd):
     rospy.Subscriber("/tf", TFMessage, tf_callback)
     setup_ingredients()
     self.grabbed_cup = None
+    self.cup_theta = 0
+    self.ingredient_weights = {"nomnom": 20.}
 
     #get the head/base transform
     tfBuffer = tf2_ros.Buffer()
@@ -285,6 +287,26 @@ class MainLoop(cmd.Cmd):
     """Appends ' cup: {}' to action and then calls format(self.grabbed_cup) and prints
     """
     print((action + ' cup: {}').format(self.grabbed_cup))
+
+  def pour(self, percent, name="nomnom", delta=5.):
+    total_weight = self.ingredient_weights[name]
+    current = self.get_weight()
+    target = current + percent * total_weight
+    diff = target - current
+    max_count = 1
+    while diff > delta and max_count > 0:
+      diff_percent = .8 * diff / total_weight
+      diff_theta = math.atan(2 * CUP_HEIGHT * diff_percent / CUP_WIDTH)
+      # Rotate cup by theta
+      print("increasing theta by: {}".format(diff_theta))
+      self.cup_theta += diff_theta
+
+      current = self.get_weight()
+      diff = target - current
+      max_count -= 1
+
+    # reset cup orientation
+    self.cup_theta = 0
 
 if __name__ == '__main__':
   MainLoop().cmdloop()
