@@ -3,6 +3,8 @@
   <!-- Open Camera -->
   <arg name="resolution" default="-r 1280x800" />
   <arg name="open" default="-o head_camera" />
+
+  <node name="head_camera" pkg="baxter_tools" type="camera_control.py" args="-c right_hand_camera" />
   <node name="left_camera" pkg="baxter_tools" type="camera_control.py" args="$(arg open) $(arg resolution)" />
 
   <!-- Setup Node -->
@@ -17,4 +19,5 @@
   <arg name="marker_margin" default="2" />
 
   <node name="ar_track_alvar_head" pkg="ar_track_alvar" type="individualMarkersNoKinect" respawn="false" output="screen" args="$(arg marker_size) $(arg max_new_marker_error) $(arg max_track_error) $(arg cam_image_topic) $(arg cam_info_topic) $(arg output_frame) $(arg max_frequency) $(arg marker_resolution) $(arg marker_margin)" />
+ node name="headsub" pkg="boba_bot" type="headsub.py" />
 </launch>
