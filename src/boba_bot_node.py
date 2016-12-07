@@ -7,6 +7,7 @@ import tf
 import tf2_ros
 import exp_quat_func as eqf
 import numpy as np
+import random
 
 import sys
 import moveit_commander
@@ -90,7 +91,7 @@ class MainLoop(cmd.Cmd):
     """
     rospy.init_node(MAIN_NODE)
 
-    #rospy.wait_for_service(SCALE_SERVICE)
+    rospy.wait_for_service(SCALE_SERVICE)
     self.get_weight = rospy.ServiceProxy(SCALE_SERVICE, get_scale_weight)
 
     # Setup tf Node
@@ -109,27 +110,24 @@ class MainLoop(cmd.Cmd):
         time.sleep(2)
         #tinme = listener.getLatestCommonTime('base', 'ar_marker_1/corrected')
         #self.trans = tfBuffer.lookup_transform('base', 'ar_marker_1/corrected', tinme, rospy.Duration(12.0))
-      	self.trans = tfBuffer.lookup_transform('base', 'head_camera', rospy.Time(0), rospy.Duration(12.0))
-      	#self.trans = self.listener.lookupTransform('base', 'ar_marker_1/corrected', rospy.Time(0))
-      	#print self.trans
-      	rot = self.trans.transform.rotation
-      	trs = self.trans.transform.translation
-      	#print rot
-      	exp = eqf.quaternion_to_exp(np.array([rot.x, rot.y, rot.z, rot.w]))
-      	#print exp
-      	rbt = eqf.create_rbt(exp[0], exp[1], np.array([trs.x, trs.y, trs.z]))
-      	#print rbt
-      	self.rbt = rbt
-      	#print dir(listener)
-      	break
+        self.trans = tfBuffer.lookup_transform('base', 'head_camera', rospy.Time(0), rospy.Duration(12.0))
+        #self.trans = self.listener.lookupTransform('base', 'ar_marker_1/corrected', rospy.Time(0))
+        #print self.trans
+        rot = self.trans.transform.rotation
+        trs = self.trans.transform.translation
+        #print rot
+        exp = eqf.quaternion_to_exp(np.array([rot.x, rot.y, rot.z, rot.w]))
+        #print exp
+        rbt = eqf.create_rbt(exp[0], exp[1], np.array([trs.x, trs.y, trs.z]))
+        #print rbt
+        self.rbt = rbt
+        #print dir(listener)
+        break
       except IOError: #(tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
         time.sleep(2)
 
 
     moveit_commander.roscpp_initialize(sys.argv)
-
-    #Start a node
-    #rospy.init_node('moveit_node')
 
     listener = tf.TransformListener()
 
@@ -143,10 +141,44 @@ class MainLoop(cmd.Cmd):
     self.right_arm.set_planner_id('RRTConnectkConfigDefault')
     self.right_arm.set_planning_time(10)
 
+    #move arm to base position away from cameras
+    #base_location = [.22,.88,.5]
+    base_location = [.08, 1.3, .4]
+    base_plan = self.plan_path(self.left_arm, base_location, [0,0,0])
+    while not self.left_arm.execute(base_plan):
+      base_plan = self.plan_path(self.left_arm, base_location+[.1*np.random.random(), 0 , .1*numpy.random.random()], [0,0,0])
+
+
   def convert_to_base(self, rbt, ingredient_position):
-  	x1 = np.array([ingredient_position[i] for i in range(3)] + [1])
-  	base_coord = self.rbt.dot(x1.reshape(4,1)).getA().flatten()
-  	return base_coord
+    x1 = np.array([ingredient_position[i] for i in range(3)] + [1])
+    base_coord = self.rbt.dot(x1.reshape(4,1)).getA().flatten()
+    return base_coord
+
+  def plan_path(self, grab_arm, base_coord, offset):
+    goal_1 = PoseStamped()
+    goal_1.header.frame_id = "base"
+
+    #x, y, and z position
+    goal_1.pose.position.x = base_coord[0] + offset[0]
+    goal_1.pose.position.y = base_coord[1] + offset[1]
+    goal_1.pose.position.z = base_coord[2] + offset[2]
+    
+    #Orientation as a quaternion
+    goal_1.pose.orientation.x = 0.0
+    goal_1.pose.orientation.y = 2**.5/2
+    goal_1.pose.orientation.z = 0.0
+    goal_1.pose.orientation.w = 2**.5/2
+
+    #Set the goal state to the pose you just defined
+    grab_arm.set_pose_target(goal_1)
+
+    #Set the start state for the left arm
+    grab_arm.set_start_state_to_current_state()
+
+    #Plan a path
+    grab_plan = grab_arm.plan()
+    return grab_plan
+
 
   def do_show_head_ingredients(self, line):
     """Displays all ingredients seen by head_camera
@@ -156,13 +188,12 @@ class MainLoop(cmd.Cmd):
       # If the cup has been seen less than a second ago, consider still visible
       if ingredient.last_seen_head and time.time() - ingredient.last_seen_head < 1:
         print(ingredient.name + " is located at ({}, {}, {})".format(ingredient.position_head[0],
-								     ingredient.position_head[1], 
-							             ingredient.position_head[2]))  
+                     ingredient.position_head[1], 
+                           ingredient.position_head[2]))  
       else:
         print(ingredient.name + " is not found") 
   
-  #how_base_ingredients
-  def do_s(self, line):
+  def do_show_base_ingredients(self, line):
     """Displays all ingredients seen by head_camera wrt base
     """
     print("Displaying all ingredients that head sees:")
@@ -170,8 +201,8 @@ class MainLoop(cmd.Cmd):
       
       # If the cup has been seen less than a second ago, consider still visible
       if ingredient.last_seen_head and time.time() - ingredient.last_seen_head < 1:
-      	base_coord = self.convert_to_base(self.rbt, ingredient.position_head)
-      	print base_coord
+        base_coord = self.convert_to_base(self.rbt, ingredient.position_head)
+        print base_coord
         print(ingredient.name + " is located at ({}, {}, {})".format(*[base_coord[i] for i in range(3)]))  
       else:
         print(ingredient.name + " is not found")
@@ -184,8 +215,8 @@ class MainLoop(cmd.Cmd):
       # If the cup has been seen less than a second ago, consider still visible
       if ingredient.last_seen_left_arm:# and time.time() - ingredient.last_seen_left_arm < 1:
         print(ingredient.name + " is located at ({}, {}, {})".format(ingredient.position_left_arm[0],   
-								     ingredient.position_left_arm[1], 
-							             ingredient.position_left_arm[2])) 
+                     ingredient.position_left_arm[1], 
+                           ingredient.position_left_arm[2])) 
       else:
         print (ingredient.name + " is not found")
 
@@ -199,49 +230,63 @@ class MainLoop(cmd.Cmd):
     for ingredient in ingredients.values():
        print(ingredient.name)
 
+  def do_s(self, line):
+    self.do_grab("Mango a 0 0 .3")
+
   def do_grab(self, args):
     """Moves Baxter's gripper to grab a cup.
     """
-    cup, arm = args.split(' ')
-
+    cup, arm, x, y, z= args.split(' ')
+    x = float(x)
+    y = float(y)
+    z = float(z)
+    #right arm is broken
+    grab_arm = self.left_arm
+    """
     if arm == "left":
-    	grab_arm = self.left_arm
+      grab_arm = self.left_arm
     if arm == "right":
-    	grab_arm = self.right_arm
+      grab_arm = self.right_arm
+    """
+
     if cup != "":
       self.grabbed_cup = cup
       self.report("grabbing")
       print(cup + " is at ")
       base_coord = self.convert_to_base(self.rbt, ingredients[cup].position_head)
       print base_coord
-
-      #First goal pose ------------------------------------------------------
-      goal_1 = PoseStamped()
-      goal_1.header.frame_id = "base"
-
-      #x, y, and z position
-      goal_1.pose.position.x = base_coord[0]
-      goal_1.pose.position.y = base_coord[1]
-      goal_1.pose.position.z = base_coord[2] + .2
-    
-      #Orientation as a quaternion
-      goal_1.pose.orientation.x = 0.0
-      goal_1.pose.orientation.y = 2**.5/2
-      goal_1.pose.orientation.z = 0.0
-      goal_1.pose.orientation.w = 2**.5/2
-
-      #Set the goal state to the pose you just defined
-      grab_arm.set_pose_target(goal_1)
-
-      #Set the start state for the left arm
-      grab_arm.set_start_state_to_current_state()
-
-      #Plan a path
-      grab_plan = grab_arm.plan()
-
+      offset = [x,y,z]
+      grab_plan = self.plan_path(grab_arm, base_coord, offset)
       #Execute the plan
       #raw_input('Press <Enter> to move the left arm to goal pose 1 (path constraints are never enforced during this motion): ')
-      grab_arm.execute(grab_plan)
+      path_found = grab_arm.execute(grab_plan)
+      if not path_found:
+        print "try new offset"
+        return
+    tf_offset = offset
+    while True:
+      print('down')
+      delta = .2
+      print tf_offset
+      while tf_offset[2] > .1:
+        rospy.sleep(1)
+        tf_offset[2] -= delta
+        print tf_offset
+        grab_plan = self.plan_path(grab_arm, base_coord, tf_offset)
+        path_found = grab_arm.execute(grab_plan)
+        if not path_found:
+          print "try new offset"
+          return
+
+      print 'up'
+      while tf_offset[2] < offset[2]:
+        rospy.sleep(1)
+        tf_offset[2] += delta
+        grab_plan = self.plan_path(grab_arm, base_coord, tf_offset)
+        path_found = grab_arm.execute(grab_plan)
+        if not path_found:
+          print "try new offset"
+          return
     else:
       print("Please tell me a cup to grab")
 
