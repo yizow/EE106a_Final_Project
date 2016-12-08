@@ -1,20 +1,23 @@
 #!/usr/bin/python
 
+import math
 import cmd
 import time
-import rospy
+import random
+import sys
+
 import tf
 import tf2_ros
 import exp_quat_func as eqf
 import numpy as np
-import random
 
-import sys
-
+import rospy
 from std_msgs.msg import Float32
 from tf2_msgs.msg import TFMessage
+
 from conf import ingredient_list, menu_list
 from util import *
+
 CORRECTED_KEYWORD = "/corrected"
 
 """ Ingredients """
@@ -87,7 +90,8 @@ class MainLoop(cmd.Cmd):
     rospy.init_node(MAIN_NODE)
 
     rospy.wait_for_service(SCALE_SERVICE)
-    self.get_weight = rospy.ServiceProxy(SCALE_SERVICE, get_scale_weight)
+    self._get_weight = rospy.ServiceProxy(SCALE_SERVICE, get_scale_weight)
+    self.get_weight = lambda: self._get_weight().weight.data
 
     # Setup tf Node
     rospy.Subscriber("/tf", TFMessage, tf_callback)
@@ -111,7 +115,7 @@ class MainLoop(cmd.Cmd):
       try:
         time.sleep(2)
         #tinme = listener.getLatestCommonTime('base', 'ar_marker_1/corrected')
-        #self.trans = tfBuffer.lookup_transform('base', 'ar_marker_1/corrected', tinme, rospy.Duration(12.0))
+        #self.trans = tfBuffer.lookup_transform('base', 'ar_marker_1/corrected', tinme, rospy.Duration(12.00000))
         self.trans = tfBuffer.lookup_transform('base', 'head_camera', rospy.Time(0), rospy.Duration(12.0))
         #self.trans = self.listener.lookupTransform('base', 'ar_marker_1/corrected', rospy.Time(0))
         #print self.trans
@@ -304,9 +308,8 @@ class MainLoop(cmd.Cmd):
     """Pours a grabbed cup.
     """
     self.report("pouring")
-    response = self.get_weight()
-    print("weight: {}".format(response.weight.data))
-    #self.pour(.5)
+    print("weight: {}".format(self.get_weight()))
+    self.pour(.5)
 
   def do_return(self, line):
     """Returns a grabbed cup to its original position.
@@ -318,6 +321,12 @@ class MainLoop(cmd.Cmd):
     """
     self.grabbed_cup = None
     self.report("releasing")
+
+  def do_print(self, line):
+    """Prints the state of the robot.
+    """
+    for state in ["grabbed_cup", "cup_theta"]:
+      print("{}: {}".format(state, getattr(self, state)))
 
   def do_quit(self, line):
     """End with quit, exit, or ctrl-d
