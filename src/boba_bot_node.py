@@ -100,7 +100,9 @@ class MainLoop(cmd.Cmd):
     self.grabbed_cup = None
     self.cup_theta = 0
     self.ingredient_weights = {"nomnom": 20.}
+    
 
+  def do_robot_init(self):
     #get the head/base transform
     tfBuffer = tf2_ros.Buffer()
     listener2 = tf2_ros.TransformListener(tfBuffer)
@@ -123,15 +125,17 @@ class MainLoop(cmd.Cmd):
         self.rbt = rbt
         #print dir(listener)
         break
-      except IOError: #(tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
-        time.sleep(2)
+      except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+        rospy.sleep(2)
 
 
-    moveit_commander.roscpp_initialize(sys.argv)
 
-    listener = tf.TransformListener()
+    self.setup_motion()
+    self.movebase()
 
+  def setup_motion(self):
     #Initialize both arms
+    moveit_commander.roscpp_initialize(sys.argv)
     robot = moveit_commander.RobotCommander()
     scene = moveit_commander.PlanningSceneInterface()
     self.left_arm = moveit_commander.MoveGroupCommander('left_arm')
@@ -139,8 +143,7 @@ class MainLoop(cmd.Cmd):
     self.left_arm.set_planner_id('RRTConnectkConfigDefault')
     self.left_arm.set_planning_time(10)
     self.right_arm.set_planner_id('RRTConnectkConfigDefault')
-    self.right_arm.set_planning_time(10)
-    self.movebase()
+    self.right_arm.set_planning_time(10)   
 
   def movebase(self):
     #move arm to base position away from cameras
