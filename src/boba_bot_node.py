@@ -108,6 +108,9 @@ class MainLoop(cmd.Cmd):
     self.cup_theta = 0
     self.ingredient_weights = {"nomnom": 20.}
 
+    self.do_setup_motion("")
+    self.do_reset("")
+
   def do_robot_init(self, line):
     #get the head/base transform
     tfBuffer = tf2_ros.Buffer()
@@ -133,8 +136,6 @@ class MainLoop(cmd.Cmd):
         break
       except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
         rospy.sleep(2)
-
-
 
     self.do_setup_motion()
     self.movebase()
@@ -286,6 +287,24 @@ class MainLoop(cmd.Cmd):
             "/base",
             "/{}_gripper".format(line),
             rospy.Time(0))[0]
+
+  def do_demo(self, line):
+    """ Optional wait_time float argument can be given.
+    If given, waits that long before executing the rest of the demo.
+    The demo consists of resetting both arms, then moving the right
+    arm forwards, then backwards, then resetting both arms again.
+    """
+    if line != "":
+      # Pause before executing to get setup for video
+      wait_time = float(line)
+      rospy.sleep(wait_time)
+
+    self.do_reset("")
+    rospy.sleep(1)
+    self.do_forward("right")
+    rospy.sleep(1)
+    self.do_backward("right")
+    self.do_reset("")
 
   def do_show_menu(self, line):
     """Display available menu"""

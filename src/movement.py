@@ -8,7 +8,7 @@ import moveit_commander
 from moveit_msgs.msg import OrientationConstraint, Constraints
 from geometry_msgs.msg import PoseStamped
 
-DELTA = .1
+DELTA = .2
 
 def setup_motion():
   moveit_commander.roscpp_initialize(sys.argv)
@@ -77,9 +77,9 @@ def move_backward(arm, position):
 def move_steps(arm, steps):
   for step in steps:
     print "moving to: {}".format(step)
-    move(arm, step)
+    move(arm, step, True)
 
-def move(arm, position):
+def move(arm, position, constrained=False):
   goal = create_goal(position)
   set_goal_orientation(goal.pose)
 
@@ -88,6 +88,10 @@ def move(arm, position):
 
   #Set the start state for the left arm
   arm.set_start_state_to_current_state()
+
+  # Constrain gripper to always point forwards
+  if constrained:
+    arm.set_path_constraints(create_constraint(arm.get_end_effector_link()))
 
   #Plan a path
   plan = arm.plan()
