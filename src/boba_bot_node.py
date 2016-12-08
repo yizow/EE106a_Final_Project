@@ -229,6 +229,50 @@ class MainLoop(cmd.Cmd):
       else:
         print (ingredient.name + " is not found")
 
+  def do_constrained_move(self, line):
+    left_arm = self.left_arm
+
+    goal = PoseStamped()
+
+    e_id = "base"
+
+    position = [float(x) for x in line.split()]
+    #x, y, and z position
+    goal.pose.position.x = position[0]
+    goal.pose.position.y = position[1]
+    goal.pose.position.z = position[2]
+
+    #Orientation as a quaternion
+    goal.pose.orientation.x = 0.0
+    goal.pose.orientation.y = -1.0
+    goal.pose.orientation.z = 0.0
+    goal.pose.orientation.w = 0.0
+
+    #Set the goal state to the pose you just defined
+    left_arm.set_pose_target(goal)
+
+    #Set the start state for the left arm
+    left_arm.set_start_state_to_current_state()
+
+    # #Create a path constraint for the arm
+    # #UNCOMMENT TO ENABLE ORIENTATION CONSTRAINTS
+    orien_const = OrientationConstraint()
+    orien_const.link_name = "left_gripper";
+    orien_const.header.frame_id = "base";
+    orien_const.orientation.y = -1.0;
+    orien_const.absolute_x_axis_tolerance = 0.1;
+    orien_const.absolute_y_axis_tolerance = 0.1;
+    orien_const.absolute_z_axis_tolerance = 0.1;
+    orien_const.weight = 1.0;
+    consts = Constraints()
+    consts.orientation_constraints = [orien_const]
+    left_arm.set_path_constraints(consts)
+
+    #Plan a path
+    left_plan = left_arm.plan()
+
+    left_arm.execute(left_plan)
+
   def do_show_menu(self, line):
     """Display available menu"""
     for menu in menu_list:
