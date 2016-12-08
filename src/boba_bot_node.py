@@ -10,11 +10,6 @@ import numpy as np
 import random
 
 import sys
-import moveit_commander
-from moveit_msgs.msg import OrientationConstraint, Constraints
-from geometry_msgs.msg import PoseStamped
-from baxter_interface import gripper as baxter_gripper
-
 
 from std_msgs.msg import Float32
 from tf2_msgs.msg import TFMessage
@@ -103,6 +98,11 @@ class MainLoop(cmd.Cmd):
     
 
   def do_robot_init(self):
+    import moveit_commander
+    from moveit_msgs.msg import OrientationConstraint, Constraints
+    from geometry_msgs.msg import PoseStamped
+    from baxter_interface import gripper as baxter_gripper
+
     #get the head/base transform
     tfBuffer = tf2_ros.Buffer()
     listener2 = tf2_ros.TransformListener(tfBuffer)
