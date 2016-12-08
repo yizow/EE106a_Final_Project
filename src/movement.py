@@ -1,10 +1,14 @@
 import sys
 
+import numpy as np
+
 import rospy
 
 import moveit_commander
 from moveit_msgs.msg import OrientationConstraint, Constraints
 from geometry_msgs.msg import PoseStamped
+
+DELTA = .1
 
 def setup_motion():
   moveit_commander.roscpp_initialize(sys.argv)
@@ -32,8 +36,6 @@ def create_goal(end_position):
 
 def set_goal_orientation(goal):
   goal.orientation.x = 0.0
-
-
   goal.orientation.y = 2**.5/2
   goal.orientation.z = 0.0
   goal.orientation.w = 2**.5/2
@@ -53,25 +55,29 @@ def create_constraint(name):
   return consts
 
 def move_forward(arm, position):
-  steps = [(x, position.y, position.z) for x in range(position.x, 1., .05)]
+  x, y, z = position
+  x_points = list(np.arange(x, .95, DELTA))
+  steps = [(x, y, z) for x in x_points]
   # Make sure we end at a consistent location
   if steps[-1][0] != .95:
-    steps.append((.95, position.y, position.z))
+    steps.append((.95, y, z))
 
   move_steps(arm, steps)
 
-def move_backward(position):
-  steps = [(x, position.y, position.z) for x in range(position.x, .2, -.05)]
+def move_backward(arm, position):
+  x, y, z = position
+  x_points = list(np.arange(x, .2, -DELTA))
+  steps = [(x, y, z) for x in x_points]
   # Make sure we end at a consistent location
-  if steps[-1][0] != .95:
-    steps.append((.95, position.y, position.z))
+  if steps[-1][0] != .2:
+    steps.append((.2, y, z))
 
   move_steps(arm, steps)
 
 def move_steps(arm, steps):
   for step in steps:
+    print "moving to: {}".format(step)
     move(arm, step)
-    rospy.sleep(.5)
 
 def move(arm, position):
   goal = create_goal(position)

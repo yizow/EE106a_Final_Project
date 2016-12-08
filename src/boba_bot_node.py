@@ -100,6 +100,7 @@ class MainLoop(cmd.Cmd):
     self.get_weight = lambda: self._get_weight().weight.data
 
     # Setup tf Node
+    self.tf = tf.TransformListener()
     rospy.Subscriber("/tf", TFMessage, tf_callback)
     setup_ingredients()
 
@@ -253,6 +254,38 @@ class MainLoop(cmd.Cmd):
       self.do_move("right .2 -.6 .2")
     if line != "right":
       self.do_move("left .2 .6 .2")
+
+  def do_forward(self, line):
+    """ Moves the given arm forward.
+        If no arm, or an invalid arm, is given, move the right arm.
+        Valid arms are "left" or "right"
+    """
+    arm, position = self.get_arm(line)
+    if arm == None:
+      return
+    movement.move_forward(arm, position)
+
+  def do_backward(self, line):
+    arm, position = self.get_arm(line)
+    if arm == None:
+      return
+    movement.move_backward(arm, position)
+
+  def get_arm(self, line):
+    if line == "right":
+      arm = self.right_arm
+    elif line == "left":
+      arm = self.left_arm
+    else:
+      print("No arm given")
+      return None, None
+    return arm, self.get_position(line)
+
+  def get_position(self, line):
+    return self.tf.lookupTransform(
+            "/base",
+            "/{}_gripper".format(line),
+            rospy.Time(0))[0]
 
   def do_show_menu(self, line):
     """Display available menu"""
