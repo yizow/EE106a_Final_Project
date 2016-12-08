@@ -15,8 +15,14 @@ import rospy
 from std_msgs.msg import Float32
 from tf2_msgs.msg import TFMessage
 
+import moveit_commander
+from moveit_msgs.msg import OrientationConstraint, Constraints
+from geometry_msgs.msg import PoseStamped
+
 from conf import ingredient_list, menu_list
 from util import *
+
+import movement
 
 CORRECTED_KEYWORD = "/corrected"
 
@@ -96,17 +102,12 @@ class MainLoop(cmd.Cmd):
     # Setup tf Node
     rospy.Subscriber("/tf", TFMessage, tf_callback)
     setup_ingredients()
+
     self.grabbed_cup = None
     self.cup_theta = 0
     self.ingredient_weights = {"nomnom": 20.}
-    
 
-  def do_robot_init(self):
-    import moveit_commander
-    from moveit_msgs.msg import OrientationConstraint, Constraints
-    from geometry_msgs.msg import PoseStamped
-    from baxter_interface import gripper as baxter_gripper
-
+  def do_robot_init(self, line):
     #get the head/base transform
     tfBuffer = tf2_ros.Buffer()
     listener2 = tf2_ros.TransformListener(tfBuffer)
@@ -134,20 +135,11 @@ class MainLoop(cmd.Cmd):
 
 
 
-    self.setup_motion()
+    self.do_setup_motion()
     self.movebase()
 
-  def setup_motion(self):
-    #Initialize both arms
-    moveit_commander.roscpp_initialize(sys.argv)
-    robot = moveit_commander.RobotCommander()
-    scene = moveit_commander.PlanningSceneInterface()
-    self.left_arm = moveit_commander.MoveGroupCommander('left_arm')
-    self.right_arm = moveit_commander.MoveGroupCommander('right_arm')
-    self.left_arm.set_planner_id('RRTConnectkConfigDefault')
-    self.left_arm.set_planning_time(10)
-    self.right_arm.set_planner_id('RRTConnectkConfigDefault')
-    self.right_arm.set_planning_time(10)   
+  def do_setup_motion(self, line=""):
+    self.left_arm, self.right_arm = movement.setup_motion()
 
   def movebase(self):
     #move arm to base position away from cameras
@@ -229,49 +221,38 @@ class MainLoop(cmd.Cmd):
       else:
         print (ingredient.name + " is not found")
 
-  def do_constrained_move(self, line):
-    left_arm = self.left_arm
+  def do_i(self, line):
+    exec line
 
-    goal = PoseStamped()
+  def do_move(self, line):
+    """ move arm x y z
+        arm: left or right. Defaults to right.
+        x y z: should be kept in range [.2, 1.)
+    """
+    args = line.split()
+    if len(args) == 4:
+      arm = args.pop(0)
+    else:
+      arm = ""
 
-    e_id = "base"
+    position = [float(coordinate) for coordinate in args]
 
-    position = [float(x) for x in line.split()]
-    #x, y, and z position
-    goal.pose.position.x = position[0]
-    goal.pose.position.y = position[1]
-    goal.pose.position.z = position[2]
+    if arm == "left":
+      arm = self.left_arm
+    else:
+      arm = self.right_arm
 
-    #Orientation as a quaternion
-    goal.pose.orientation.x = 0.0
-    goal.pose.orientation.y = -1.0
-    goal.pose.orientation.z = 0.0
-    goal.pose.orientation.w = 0.0
+    movement.move(arm, position)
 
-    #Set the goal state to the pose you just defined
-    left_arm.set_pose_target(goal)
-
-    #Set the start state for the left arm
-    left_arm.set_start_state_to_current_state()
-
-    # #Create a path constraint for the arm
-    # #UNCOMMENT TO ENABLE ORIENTATION CONSTRAINTS
-    orien_const = OrientationConstraint()
-    orien_const.link_name = "left_gripper";
-    orien_const.header.frame_id = "base";
-    orien_const.orientation.y = -1.0;
-    orien_const.absolute_x_axis_tolerance = 0.1;
-    orien_const.absolute_y_axis_tolerance = 0.1;
-    orien_const.absolute_z_axis_tolerance = 0.1;
-    orien_const.weight = 1.0;
-    consts = Constraints()
-    consts.orientation_constraints = [orien_const]
-    left_arm.set_path_constraints(consts)
-
-    #Plan a path
-    left_plan = left_arm.plan()
-
-    left_arm.execute(left_plan)
+  def do_reset(self, line):
+    """ Resets the given arm to starting position.
+        If no arm, or an invalid arm, is given, reset both arms.
+        Valid arms are "left" or "right"
+    """
+    if line != "left":
+      self.do_move("right .2 -.6 .2")
+    if line != "right":
+      self.do_move("left .2 .6 .2")
 
   def do_show_menu(self, line):
     """Display available menu"""
@@ -342,11 +323,6 @@ class MainLoop(cmd.Cmd):
           return
     else:
       print("Please tell me a cup to grab")
-
-  def do_move(self, line):
-    """Moves a grabbed cup to pouring position.
-    """
-    self.report("moving")
 
   def do_pour(self, line):
     """Pours a grabbed cup.
