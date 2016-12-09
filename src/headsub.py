@@ -41,14 +41,13 @@ def callback(data):
     tim = tim.header.stamp
 
     if child_frame in ar_markers and frame_id == "/head_camera":
-    print frame_id
         now = rospy.Time.now()
         try:
             print "orig vals"
             print(data)
 
             ndata = data
-            ndata.transforms[0].transform.translation.x = -tftranslations.x
+            ndata.transforms[0].transform.translation.x = -translations.x
             ndata.transforms[0].transform.translation.y = -translations.y
             ndata.transforms[0].transform.rotation.x = -quaternion.x
             ndata.transforms[0].transform.rotation.y = -quaternion.y
