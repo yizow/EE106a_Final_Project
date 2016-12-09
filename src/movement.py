@@ -10,6 +10,11 @@ from geometry_msgs.msg import PoseStamped
 
 DELTA = .2
 
+X_MAX = .95
+X_MIN = .2
+Z_MAX = .95
+Z_MIN = .2
+
 def setup_motion():
   moveit_commander.roscpp_initialize(sys.argv)
   robot = moveit_commander.RobotCommander()
@@ -54,23 +59,43 @@ def create_constraint(name):
   consts.orientation_constraints = [orien_const]
   return consts
 
-def move_forward(arm, position):
-  x, y, z = position
-  x_points = list(np.arange(x, .95, DELTA))
+def move_forward(arm, start):
+  x, y, z = start
+  x_points = list(np.arange(x, X_MAX, DELTA))
   steps = [(x, y, z) for x in x_points]
   # Make sure we end at a consistent location
-  if steps[-1][0] != .95:
-    steps.append((.95, y, z))
+  if steps[-1][0] != X_MAX:
+    steps.append((X_MAX, y, z))
 
   move_steps(arm, steps)
 
-def move_backward(arm, position):
-  x, y, z = position
-  x_points = list(np.arange(x, .2, -DELTA))
+def move_backward(arm, start):
+  x, y, z = start
+  x_points = list(np.arange(x, X_MIN, -DELTA))
   steps = [(x, y, z) for x in x_points]
   # Make sure we end at a consistent location
-  if steps[-1][0] != .2:
-    steps.append((.2, y, z))
+  if steps[-1][0] != X_MIN:
+    steps.append((X_MIN, y, z))
+
+  move_steps(arm, steps)
+
+def move_up(arm, start):
+  x, y, z = start
+  z_points = list(np.arange(z, Z_MAX, DELTA))
+  steps = [(x, y, z) for z in z_points]
+  # Make sure we end at a consistent location
+  if steps[-1][0] != Z_MAX:
+    steps.append((x, y, Z_MAX))
+
+  move_steps(arm, steps)
+
+def move_down(arm, start):
+  x, y, z = start
+  z_points = list(np.arange(z, Z_MIN, -DELTA))
+  steps = [(x, y, z) for z in z_points]
+  # Make sure we end at a consistent location
+  if steps[-1][0] != Z_MIN:
+    steps.append((x, y, Z_MIN))
 
   move_steps(arm, steps)
 
@@ -79,8 +104,8 @@ def move_steps(arm, steps):
     print "moving to: {}".format(step)
     move(arm, step, True)
 
-def move(arm, position, constrained=False):
-  goal = create_goal(position)
+def move(arm, destination, constrained=False):
+  goal = create_goal(destination)
   set_goal_orientation(goal.pose)
 
   #Set the goal state to the pose you just defined

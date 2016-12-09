@@ -267,10 +267,34 @@ class MainLoop(cmd.Cmd):
     movement.move_forward(arm, position)
 
   def do_backward(self, line):
+    """ Moves the given arm backwards.
+        If no arm, or an invalid arm, is given, move the right arm.
+        Valid arms are "left" or "right"
+    """
     arm, position = self.get_arm(line)
     if arm == None:
       return
     movement.move_backward(arm, position)
+
+  def do_up(self, line):
+    """ Moves the given arm up.
+        If no arm, or an invalid arm, is given, move the right arm.
+        Valid arms are "left" or "right"
+    """
+    arm, position = self.get_arm(line)
+    if arm == None:
+      return
+    movement.move_up(arm, position)
+
+  def do_down(self, line):
+    """ Moves the given arm down.
+        If no arm, or an invalid arm, is given, move the right arm.
+        Valid arms are "left" or "right"
+    """
+    arm, position = self.get_arm(line)
+    if arm == None:
+      return
+    movement.move_down(arm, position)
 
   def get_arm(self, line):
     if line == "right":
@@ -292,7 +316,8 @@ class MainLoop(cmd.Cmd):
     """ Optional wait_time float argument can be given.
     If given, waits that long before executing the rest of the demo.
     The demo consists of resetting both arms, then moving the right
-    arm forwards, then backwards, then resetting both arms again.
+    arm forwards, then up, then down, then backwards, then resetting
+    both arms again.
     """
     if line != "":
       # Pause before executing to get setup for video
@@ -304,6 +329,11 @@ class MainLoop(cmd.Cmd):
     self.do_forward("right")
     rospy.sleep(1)
     self.do_backward("right")
+    rospy.sleep(1)
+    self.do_up("right")
+    rospy.sleep(1)
+    self.do_down("right")
+    rospy.sleep(1)
     self.do_reset("")
 
   def do_show_menu(self, line):
