@@ -1,4 +1,5 @@
 import sys
+import math
 
 import numpy as np
 
@@ -14,6 +15,9 @@ X_MAX = .95
 X_MIN = .2
 Z_MAX = .95
 Z_MIN = .2
+# Y_MAX is the absolute value. The right arm uses negative y values
+Y_MAX = .8
+Y_MIN = .3
 
 def setup_motion():
   moveit_commander.roscpp_initialize(sys.argv)
@@ -84,7 +88,7 @@ def move_up(arm, start):
   z_points = list(np.arange(z, Z_MAX, DELTA))
   steps = [(x, y, z) for z in z_points]
   # Make sure we end at a consistent location
-  if steps[-1][0] != Z_MAX:
+  if steps[-1][2] != Z_MAX:
     steps.append((x, y, Z_MAX))
 
   move_steps(arm, steps)
@@ -94,8 +98,30 @@ def move_down(arm, start):
   z_points = list(np.arange(z, Z_MIN, -DELTA))
   steps = [(x, y, z) for z in z_points]
   # Make sure we end at a consistent location
-  if steps[-1][0] != Z_MIN:
+  if steps[-1][2] != Z_MIN:
     steps.append((x, y, Z_MIN))
+
+  move_steps(arm, steps)
+
+def move_out(arm, start):
+  x, y, z = start
+  maximum = math.copysign(Y_MAX, y)
+  y_points = list(np.arange(y, maximum, math.copysign(DELTA, y)))
+  steps = [(x, y, z) for y in y_points]
+  # Make sure we end at a consistent location
+  if steps[-1][1] != maximum:
+    steps.append((x, maximum, z))
+
+  move_steps(arm, steps)
+
+def move_in(arm, start):
+  x, y, z = start
+  minimum = math.copysign(Y_MIN, y)
+  y_points = list(np.arange(y, minimum, math.copysign(DELTA, y)))
+  steps = [(x, y, z) for z in z_points]
+  # Make sure we end at a consistent location
+  if steps[-1][1] != minimum:
+    steps.append((x, minimum, z))
 
   move_steps(arm, steps)
 
