@@ -27,7 +27,8 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-# We use this code from joint_position_keyboard.py from baxter examples to help control 
+# We used the examples joint_position_keyboard.py and gripper_keyboard from baxter examples 
+# to help model these functions
 import time
 import rospy
 import baxter_interface
@@ -39,13 +40,10 @@ TIMEOUT = 5
 W2_INDEX = 6
 left_limb = None
 right_limb = None
+left_gripper = None
+right_gripper = None
 
-# Global Limbs
-def set_j(limb, joint_name, delta):
-  current_position = limb.joint_angle(joint_name)
-  joint_command = {joint_name: current_position + delta }
-  limb.set_joint_positions(joint_command)
-  print(joint_command)
+""" Wrist Rotation Functions """
 
 # Stores limb's wrist state in variable
 def save_state(limb_name):
@@ -82,16 +80,79 @@ def restore_state(limb_name):
     limb.set_joint_positions({wrist_name: saved_state[wrist_name]})
     delta = abs(limb.joint_angles()[wrist_name] - saved_state[wrist_name])
 
-def rotate_left_wrist(delta):
-  lj = left_limb.joint_names()
-  set_j(left_limb, lj[6], delta)
+# Rotates wrist by delta
+def rotate_wrist(wrist_name, delta):
+  if (wrist_name == 'right'):
+    limb = right_limb
+  elif (wrist_name == 'left'):
+    limb = left_limb
+  else:
+    print("No limb {} ".format(wrist_name))
+    return
+  joint_name = limb.joint_names()[6]
+  current_position = limb.joint_angle(joint_name)
+  joint_command = {joint_name: current_position + delta }
+  limb.set_joint_positions(joint_command)
+  print(joint_command)
 
-def rotate_right_wrist(delta):
-  rj = right_limb.joint_names()
-  set_j(right_limb, rj[6], delta)
 
+""" Gripper Functions """
+
+# Open, calibrate, then close
+def g_grab(gripper_name):
+  if(gripper_name in ['right', 'left']):
+    g_open(gripper_name)
+    g_calibrate(gripper_name)
+    g_close(gripper_name)
+  else:
+    print("No {} gripper".format(gripper_name))
+
+# Calibrate the gripper
+def g_calibrate(gripper_name):
+  if(gripper_name == 'right'):
+    right_gripper.calibrate()
+  elif(gripper_name == 'left'):
+    left_gripper.calibrate()
+  else:
+    print("No {} gripper".format(gripper_name))
+
+# Open the Gripper
+def g_open(gripper_name):
+  if(gripper_name == 'right'):
+    right_gripper.open()
+  elif(gripper_name == 'left'):
+    left_gripper.open()
+  else:
+    print("No {} gripper".format(gripper_name))
+
+# Close the Gripper
+def g_close(gripper_name):
+  if(gripper_name == 'right'):
+    right_gripper.close()
+  elif(gripper_name == 'left'):
+    left_gripper.close()
+  else:
+    print("No {} gripper".format(gripper_name))
+
+def offset_holding(gripper, offset):
+  if gripper.type() != 'electric':
+    return
+  current = gripper.parameters()['holding_force']
+  gripper.set_holding_force(current + offset)
+
+# Adjust holding strength by val
+def g_adj_hold(gripper_name, val):
+  if(gripper_name == 'right'):
+    offset_holding(right_gripper, val) 
+  elif(gripper_name == 'left'):
+    offset_holding(left_gripper, val) 
+  else:
+    print("No {} gripper".format(gripper_name))
+
+""" Setup global interfaces """
 def wrist_setup():
-  global left_limb
-  global right_limb
+  global left_limb, right_limb, left_gripper, right_gripper
   left_limb = baxter_interface.Limb('left')
   right_limb = baxter_interface.Limb('right')
+  left_gripper = baxter_interface.Gripper('left')
+  right_gripper = baxter_interface.Gripper('right')
