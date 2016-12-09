@@ -21,13 +21,15 @@ from geometry_msgs.msg import PoseStamped
 
 from conf import ingredient_list, menu_list
 from util import *
-from wrist_movement import save_state, restore_state, rotate_left_wrist, rotate_right_wrist, wrist_setup
+from wrist_movement import save_state, restore_state, rotate_wrist, wrist_setup, g_grab, g_open
 
 import movement
 
 CORRECTED_KEYWORD = "/corrected"
 
-""" Ingredients """
+  #---------------# 
+  # INGREDIENTS   #
+  #---------------# 
 
 ar_markers = []
 ingredients = {}
@@ -59,7 +61,10 @@ def setup_ingredients():
     ar_markers.append(ingredient[1]+CORRECTED_KEYWORD)
   print ("Done")
 
-""" AR_TAG METHODS """
+  #----------------# 
+  # AR_TAG METHODS #
+  #----------------# 
+
 def ar_to_ingredient(ar_tag):
   for ingredient in ingredients.values():
     if ingredient.ar_tag == ar_tag or ingredient.ar_tag + CORRECTED_KEYWORD == ar_tag:
@@ -127,6 +132,10 @@ class MainLoop(cmd.Cmd):
     self.do_robot_init("")
     wrist_setup()
 
+  #---------------# 
+  # INIT COMMANDS #
+  #---------------# 
+
   def do_robot_init(self, line):
     #get the head/base transform
     tfBuffer = tf2_ros.Buffer()
@@ -159,6 +168,10 @@ class MainLoop(cmd.Cmd):
   def do_setup_motion(self, line=""):
     self.left_arm, self.right_arm = movement.setup_motion()
 
+  #-------------------# 
+  # MOVEMENT COMMANDS #
+  #-------------------# 
+
   def movebase(self):
     #move arm to base position away from cameras
     #base_location = [.22,.88,.5]
@@ -166,12 +179,6 @@ class MainLoop(cmd.Cmd):
     base_plan = self.plan_path(self.left_arm, base_location, [0,0,0])
     while not self.left_arm.execute(base_plan):
       base_plan = self.plan_path(self.left_arm, base_location+[.1*np.random.random(), 0 , .1*np.random.random()], [0,0,0])
-
-
-  def convert_to_base(self, rbt, ingredient_position):
-    x1 = np.array([ingredient_position[i] for i in range(3)] + [1])
-    base_coord = self.rbt.dot(x1.reshape(4,1)).getA().flatten()
-    return base_coord
 
   def plan_path(self, grab_arm, base_coord, offset):
     goal_1 = PoseStamped()
@@ -198,94 +205,6 @@ class MainLoop(cmd.Cmd):
     grab_plan = grab_arm.plan()
     return grab_plan
 
-
-  def do_show_head_ingredients(self, line):
-    """Displays all ingredients seen by head_camera
-    """
-    print("Displaying all ingredients that head sees:")
-    for ingredient in ingredients.values():
-      # If the cup has been seen less than a second ago, consider still visible
-      if ingredient.last_seen_head and time.time() - ingredient.last_seen_head < 1:
-        print(ingredient.name + " is located at ({}, {}, {})".format(ingredient.position_head[0],
-                     ingredient.position_head[1], 
-                           ingredient.position_head[2]))  
-      else:
-        print(ingredient.name + " is not found") 
-  
-  def do_show_base_ingredients(self, line):
-    """Displays all ingredients seen by head_camera wrt base
-    """
-    print("Displaying all ingredients that head sees:")
-    for ingredient in ingredients.values():
-      
-      # If the cup has been seen less than a second ago, consider still visible
-      if ingredient.last_seen_head and time.time() - ingredient.last_seen_head < 1:
-        base_coord = self.convert_to_base(self.rbt, ingredient.position_head)
-        print base_coord
-        print(ingredient.name + " is located at ({}, {}, {})".format(*[base_coord[i] for i in range(3)]))  
-      else:
-        print(ingredient.name + " is not found")
-
-  def do_show_left_arm_ingredients(self, line):
-    """Displays all ingredients seen by left arm_camera
-    """
-    print("Displaying all ingredients that arm sees:")
-    for ingredient in ingredients.values():
-      # If the cup has been seen less than a second ago, consider still visible
-      if ingredient.last_seen_left_arm and time.time() - ingredient.last_seen_left_arm < 1:
-        print(ingredient.name + " is located at ({}, {}, {})".format(ingredient.position_left_arm[0],   
-                     ingredient.position_left_arm[1], 
-                           ingredient.position_left_arm[2])) 
-      else:
-        print (ingredient.name + " is not found")
-
-  def do_rotate_wrist(self, line):
-    """ rotate_wrist arm delta
-        Rotates given wrist by delta (.5~.05)
-    """
-    args = line.split()
-    if(len(args) != 2):
-      print("Invalid arguments")
-      return
-    arm, delta = args
-    if arm == "right":
-      rotate_right_wrist(float(delta))
-    elif arm == "left":
-      rotate_left_wrist(float(delta))
-    else:
-      print("Please enter valid wrist")
-
-  def do_save_wrist(self, line):
-    """ save_wrist arm
-        remembers current wrist state for restoring later
-    """
-    if line in ['right', 'left']:
-      save_state(line)
-    else:
-      print("Please enter valid wrist")
-
-  def do_restore_wrist(self, line):
-    """ restore_wrist arm delta
-        restores wrist to saved state
-    """
-    if line in ['right', 'left']:
-      restore_state(line)
-    else:
-      print("Please enter valid wrist")
-
-  def do_show_right_arm_ingredients(self, line):
-    """Displays all ingredients seen by right arm_camera
-    """
-    print("Displaying all ingredients that arm sees:")
-    for ingredient in ingredients.values():
-      # If the cup has been seen less than a second ago, consider still visible
-      if ingredient.last_seen_left_arm and time.time() - ingredient.last_seen_left_arm < 1:
-        print(ingredient.name + " is located at ({}, {}, {})".format(ingredient.position_right_arm[0],   
-                     ingredient.position_right_arm[1], 
-                           ingredient.position_right_arm[2])) 
-      else:
-        print (ingredient.name + " is not found")
-
   def do_i(self, line):
     exec line
 
@@ -308,6 +227,106 @@ class MainLoop(cmd.Cmd):
       arm = self.right_arm
 
     movement.move(arm, position)
+
+  def get_arm(self, line):
+    if line == "right":
+      arm = self.right_arm
+    elif line == "left":
+      arm = self.left_arm
+    else:
+      print("No arm given")
+      return None, None
+    return arm, self.get_position(line)
+
+  def get_position(self, line):
+    return self.tf.lookupTransform(
+            "/base",
+            "/{}_gripper".format(line),
+            rospy.Time(0))[0]
+
+  def do_s(self, line):
+    self.do_grab("Mango a 0 0 .3")
+
+  def do_grab(self, args):
+    """Moves Baxter's gripper to grab a cup.
+    """
+    cup, arm, x, y, z= args.split(' ')
+    x = float(x)
+    y = float(y)
+    z = float(z)
+    #right arm is broken
+    grab_arm = self.right_arm
+    """
+    if arm == "left":
+      grab_arm = self.left_arm
+    if arm == "right":
+      grab_arm = self.right_arm
+    """
+
+    if cup != "":
+      self.grabbed_cup = cup
+      self.report("grabbing")
+      print(cup + " is at ")
+      base_coord = self.convert_to_base(self.rbt, ingredients[cup].position_head)
+      print base_coord
+      offset = [x,y,z]
+      grab_plan = self.plan_path(grab_arm, base_coord, offset)
+      #Execute the plan
+      #raw_input('Press <Enter> to move the left arm to goal pose 1 (path constraints are never enforced during this motion): ')
+      path_found = grab_arm.execute(grab_plan)
+      if not path_found:
+        print "try new offset"
+        return
+    tf_offset = offset
+    while True:
+      print('down')
+      delta = .2
+      print tf_offset
+      while tf_offset[2] > .1:
+        rospy.sleep(1)
+        tf_offset[2] -= delta
+        print tf_offset
+        grab_plan = self.plan_path(grab_arm, base_coord, tf_offset)
+        path_found = grab_arm.execute(grab_plan)
+        if not path_found:
+          print "try new offset"
+          return
+
+      print 'up'
+      while tf_offset[2] < offset[2]:
+        rospy.sleep(1)
+        tf_offset[2] += delta
+        grab_plan = self.plan_path(grab_arm, base_coord, tf_offset)
+        path_found = grab_arm.execute(grab_plan)
+        if not path_found:
+          print "try new offset"
+          return
+    else:
+      print("Please tell me a cup to grab")
+
+
+  #---------------------# 
+  # LIN_MOTION COMMANDS #
+  #---------------------# 
+
+  def do_demo(self, line):
+    """ Optional wait_time float argument can be given.
+    If given, waits that long before executing the rest of the demo.
+    The demo consists of resetting both arms, then moving the right
+    arm forwards, then up, then out, then in, then down, then backwards,
+    then resetting both arms again.
+    """
+    if line != "":
+      # Pause before executing to get setup for video
+      wait_time = float(line)
+      rospy.sleep(wait_time)
+
+    arm = "right"
+    cmd_list = [self.do_reset, self.do_forward, self.do_up, self.do_out, self.do_in, self.do_down, self.do_backward, self.do_reset]
+    for cmd in cmd_list:
+      cmd(arm)
+      rospy.sleep(1)
+
 
   def do_reset(self, line):
     """ Resets the given arm to starting position.
@@ -379,109 +398,45 @@ class MainLoop(cmd.Cmd):
       return
     movement.move_in(arm, position)
 
-  def get_arm(self, line):
-    if line == "right":
-      arm = self.right_arm
-    elif line == "left":
-      arm = self.left_arm
+  #-------------------------# 
+  # WRIST ROTATION COMMANDS #
+  #-------------------------# 
+ 
+  def do_rotate_wrist(self, line):
+    """ rotate_wrist arm delta
+        Rotates given wrist by delta (.5~.05)
+    """
+    args = line.split()
+    if(len(args) != 2):
+      print("Invalid arguments")
+      return
+    arm, delta = args
+    if arm in ['right', 'left']:
+      rotate_wrist(arm, float(delta))
     else:
-      print("No arm given")
-      return None, None
-    return arm, self.get_position(line)
+      print("Please enter valid wrist")
 
-  def get_position(self, line):
-    return self.tf.lookupTransform(
-            "/base",
-            "/{}_gripper".format(line),
-            rospy.Time(0))[0]
-
-  def do_demo(self, line):
-    """ Optional wait_time float argument can be given.
-    If given, waits that long before executing the rest of the demo.
-    The demo consists of resetting both arms, then moving the right
-    arm forwards, then up, then out, then in, then down, then backwards,
-    then resetting both arms again.
+  def do_save_wrist(self, line):
+    """ save_wrist arm
+        remembers current wrist state for restoring later
     """
-    if line != "":
-      # Pause before executing to get setup for video
-      wait_time = float(line)
-      rospy.sleep(wait_time)
-
-    arm = "right"
-    cmd_list = [self.do_reset, self.do_forward, self.do_up, self.do_out, self.do_in, self.do_down, self.do_backward, self.do_reset]
-    for cmd in cmd_list:
-      cmd(arm)
-      rospy.sleep(1)
-
-  def do_show_menu(self, line):
-    """Display available menu"""
-    for menu in menu_list:
-       print(menu)
-
-  def do_show_ingredient(self, line):
-    """Display available ingredients"""
-    for ingredient in ingredients.values():
-       print(ingredient.name)
-
-  def do_s(self, line):
-    self.do_grab("Mango a 0 0 .3")
-
-  def do_grab(self, args):
-    """Moves Baxter's gripper to grab a cup.
-    """
-    cup, arm, x, y, z= args.split(' ')
-    x = float(x)
-    y = float(y)
-    z = float(z)
-    #right arm is broken
-    grab_arm = self.right_arm
-    """
-    if arm == "left":
-      grab_arm = self.left_arm
-    if arm == "right":
-      grab_arm = self.right_arm
-    """
-
-    if cup != "":
-      self.grabbed_cup = cup
-      self.report("grabbing")
-      print(cup + " is at ")
-      base_coord = self.convert_to_base(self.rbt, ingredients[cup].position_head)
-      print base_coord
-      offset = [x,y,z]
-      grab_plan = self.plan_path(grab_arm, base_coord, offset)
-      #Execute the plan
-      #raw_input('Press <Enter> to move the left arm to goal pose 1 (path constraints are never enforced during this motion): ')
-      path_found = grab_arm.execute(grab_plan)
-      if not path_found:
-        print "try new offset"
-        return
-    tf_offset = offset
-    while True:
-      print('down')
-      delta = .2
-      print tf_offset
-      while tf_offset[2] > .1:
-        rospy.sleep(1)
-        tf_offset[2] -= delta
-        print tf_offset
-        grab_plan = self.plan_path(grab_arm, base_coord, tf_offset)
-        path_found = grab_arm.execute(grab_plan)
-        if not path_found:
-          print "try new offset"
-          return
-
-      print 'up'
-      while tf_offset[2] < offset[2]:
-        rospy.sleep(1)
-        tf_offset[2] += delta
-        grab_plan = self.plan_path(grab_arm, base_coord, tf_offset)
-        path_found = grab_arm.execute(grab_plan)
-        if not path_found:
-          print "try new offset"
-          return
+    if line in ['right', 'left']:
+      save_state(line)
     else:
-      print("Please tell me a cup to grab")
+      print("Please enter valid wrist")
+
+  def do_restore_wrist(self, line):
+    """ restore_wrist arm delta
+        restores wrist to saved state
+    """
+    if line in ['right', 'left']:
+      restore_state(line)
+    else:
+      print("Please enter valid wrist")
+
+  #------------------# 
+  # POURING COMMANDS #
+  #------------------# 
 
   def do_pour(self, line):
     """Pours x grams of liquid
@@ -493,7 +448,158 @@ class MainLoop(cmd.Cmd):
       return
     self.report("pouring")
     print("weight: {}".format(self.get_weight()))
-    self.pour(float(line))
+    self.pour(weight=float(line))
+
+  # Sleep for x seconds in increments of 10 ms, unless there is has been weight change of more than 5 grams
+  def sleep_and_measure(self, sleep_duration, arm='right', threshold=4):
+    start = time.time()
+    last_weight = self.get_weight()
+    while(abs(time.time() - start) < sleep_duration):
+      current = self.get_weight()
+      print("current {} last {}".format(current, last_weight))
+      if abs(last_weight - current) >= threshold:
+        print("Poured more than 2 grams")
+        self.do_rotate_wrist("{} {}".format(arm, .1))
+        self.do_rotate_wrist("{} {}".format(arm, .1))
+        time.sleep(1.5)
+        return True
+      last_weight = current
+      time.sleep(0.01)
+    return False
+
+  def pour(self, weight=60, arm='right', delta=5.):
+    self.do_save_wrist(arm)
+    total_weight = weight
+    current = self.get_weight()
+    last_weight = current
+    target = current + total_weight
+    diff = target - current
+    max_count = 50
+    inc = -.05
+    sleep_duration = .5
+    last_change = 0
+    while diff > delta and max_count > 0:
+      #diff_percent = .8 * diff / total_weight
+      #diff_theta = math.atan(2 * CUP_HEIGHT * diff_percent / CUP_WIDTH)
+      # Rotate cup by theta
+      self.do_rotate_wrist("{} {}".format(arm, inc))
+      #print("increasing theta by: {}".format(diff_theta))
+      #self.cup_theta += diff_theta
+
+      current = self.get_weight()
+      diff = target - current
+      # If there's less than 10% of goal to go, slow down
+      if abs(target-current) < total_weight * .10:
+        inc = -.01
+        sleep_duration = 1
+        print("I am almost there")
+      # If there's been any changes more than 2 grams, pull back then slow down 
+      if(self.sleep_and_measure(sleep_duration, arm=arm)):
+        sleep_duration = 1
+        inc = -.02
+      max_count -= 1
+
+    # reset cup orientation
+    self.cup_theta = 0
+    self.do_restore_wrist("right")
+
+  #------------------# 
+  # GRIPPER COMMANDS #
+  #------------------# 
+
+  def do_grip(self, line):
+    """ Grips cup for a given arm """
+    if(line not in ['right', 'left']):
+      print("Invalid argument")
+      return
+    g_grab(line)    
+
+  def do_open(self, line):
+    """ Release cup for a given arm """
+    if(line not in ['right', 'left']):
+      print("Invalid argument")
+      return
+    g_open(line)    
+
+  #------------------------------# 
+  # MENU/INGRED/STATUS  COMMANDS #
+  #------------------------------# 
+
+  def do_show_scale(self, line):
+    """ Prints current scale value """
+    print("Current scale weight is {} grams".format(self.get_weight()))
+
+  def do_show_menu(self, line):
+    """Display available menu"""
+    for menu in menu_list:
+       print(menu)
+
+  def do_show_ingredient(self, line):
+    """Display available ingredients"""
+    for ingredient in ingredients.values():
+       print(ingredient.name)
+
+  def convert_to_base(self, rbt, ingredient_position):
+    x1 = np.array([ingredient_position[i] for i in range(3)] + [1])
+    base_coord = self.rbt.dot(x1.reshape(4,1)).getA().flatten()
+    return base_coord
+
+  def do_show_head_ingredients(self, line):
+    """Displays all ingredients seen by head_camera
+    """
+    print("Displaying all ingredients that head sees:")
+    for ingredient in ingredients.values():
+      # If the cup has been seen less than a second ago, consider still visible
+      if ingredient.last_seen_head and time.time() - ingredient.last_seen_head < 1:
+        print(ingredient.name + " is located at ({}, {}, {})".format(ingredient.position_head[0],
+                     ingredient.position_head[1], 
+                           ingredient.position_head[2]))  
+      else:
+        print(ingredient.name + " is not found") 
+  
+  def do_show_base_ingredients(self, line):
+    """Displays all ingredients seen by head_camera wrt base
+    """
+    print("Displaying all ingredients that head sees:")
+    for ingredient in ingredients.values():
+      
+      # If the cup has been seen less than a second ago, consider still visible
+      if ingredient.last_seen_head and time.time() - ingredient.last_seen_head < 1:
+        base_coord = self.convert_to_base(self.rbt, ingredient.position_head)
+        print base_coord
+        print(ingredient.name + " is located at ({}, {}, {})".format(*[base_coord[i] for i in range(3)]))  
+      else:
+        print(ingredient.name + " is not found")
+
+  def do_show_left_arm_ingredients(self, line):
+    """Displays all ingredients seen by left arm_camera
+    """
+    print("Displaying all ingredients that arm sees:")
+    for ingredient in ingredients.values():
+      # If the cup has been seen less than a second ago, consider still visible
+      if ingredient.last_seen_left_arm and time.time() - ingredient.last_seen_left_arm < 1:
+        print(ingredient.name + " is located at ({}, {}, {})".format(ingredient.position_left_arm[0],   
+                     ingredient.position_left_arm[1], 
+                           ingredient.position_left_arm[2])) 
+      else:
+        print (ingredient.name + " is not found")
+
+  def do_show_right_arm_ingredients(self, line):
+    """Displays all ingredients seen by right arm_camera
+    """
+    print("Displaying all ingredients that arm sees:")
+    for ingredient in ingredients.values():
+      # If the cup has been seen less than a second ago, consider still visible
+      if ingredient.last_seen_left_arm and time.time() - ingredient.last_seen_left_arm < 1:
+        print(ingredient.name + " is located at ({}, {}, {})".format(ingredient.position_right_arm[0],   
+                     ingredient.position_right_arm[1], 
+                           ingredient.position_right_arm[2])) 
+      else:
+        print (ingredient.name + " is not found")
+
+  #---------------# 
+  # MISC COMMANDS #
+  #---------------# 
 
   def do_return(self, line):
     """Returns a grabbed cup to its original position.
@@ -532,63 +638,6 @@ class MainLoop(cmd.Cmd):
     """
     print((action + ' cup: {}').format(self.grabbed_cup))
 
-  def do_show_scale(self, line):
-    """Prints current scale value
-    """
-    print("Current scale weight is {} grams".format(self.get_weight()))
-
-  # Sleep for x seconds in increments of 10 ms, unless there is has been weight change of more than 5 grams
-  def sleep_and_measure(self, sleep_duration, threshold=2):
-    start = time.time()
-    last_weight = self.get_weight()
-    while(abs(time.time() - start) < sleep_duration):
-      current = self.get_weight()
-      print("current {} last {}".format(current, last_weight))
-      if abs(last_weight - current) >= threshold:
-        print("Poured more than 2 grams")
-        self.do_rotate_wrist("right {}".format(.1))
-        time.sleep(1.5)
-        return True
-      last_weight = current
-      time.sleep(0.01)
-    return False
-
-  def pour(self, weight=60, delta=5.):
-    self.do_save_wrist("right")
-    total_weight = weight
-    current = self.get_weight()
-    last_weight = current
-    target = current + total_weight
-    diff = target - current
-    max_count = 50
-    inc = -.05
-    sleep_duration = .5
-    last_change = 0
-    while diff > delta and max_count > 0:
-      #diff_percent = .8 * diff / total_weight
-      #diff_theta = math.atan(2 * CUP_HEIGHT * diff_percent / CUP_WIDTH)
-      # Rotate cup by theta
-      print("Rotating")
-      self.do_rotate_wrist("right {}".format(inc))
-      #print("increasing theta by: {}".format(diff_theta))
-      #self.cup_theta += diff_theta
-
-      current = self.get_weight()
-      diff = target - current
-      # If there's less than 10% of goal to go, slow down
-      if abs(target-current) < total_weight * .10:
-        inc = -.02
-        sleep_duration = 1
-        print("I am almost there")
-      # If there's been any changes more than 5 grams, pull back then slow down 
-      if(self.sleep_and_measure(sleep_duration)):
-        sleep_duration = 1
-        inc = -.02
-      max_count -= 1
-
-    # reset cup orientation
-    self.cup_theta = 0
-    self.do_restore_wrist("right")
 
 if __name__ == '__main__':
   MainLoop().cmdloop()
