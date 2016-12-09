@@ -75,9 +75,12 @@ def move_backward(arm, position):
   move_steps(arm, steps)
 
 def move_steps(arm, steps):
+  waypoints = []
   for step in steps:
-    print "moving to: {}".format(step)
-    move(arm, step, True)
+    print "addng waypoint: {}".format(step)
+    waypoints.append(create_goal(step))
+  plan, fraction = arm.compute_cartesian_path(waypoints, DELTA, 0.)
+  arm.execute(plan)
 
 def move(arm, position, constrained=False):
   goal = create_goal(position)
