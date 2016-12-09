@@ -21,6 +21,7 @@ from geometry_msgs.msg import PoseStamped
 
 from conf import ingredient_list, menu_list
 from util import *
+from wrist_movement import save_state, restore_state, rotate_left_wrist, rotate_right_wrist, wrist_setup
 
 import movement
 
@@ -49,6 +50,7 @@ class Ingredient():
     self.last_seen_right_arm = None
 
     self.raw = None
+
 def setup_ingredients():
   print ("Setting up ingredients...")
   for ingredient in ingredient_list:
@@ -122,6 +124,8 @@ class MainLoop(cmd.Cmd):
 
     self.do_setup_motion("")
     self.do_reset("")
+    self.do_robot_init("")
+    wrist_setup()
 
   def do_robot_init(self, line):
     #get the head/base transform
@@ -149,8 +153,8 @@ class MainLoop(cmd.Cmd):
       except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
         rospy.sleep(2)
 
-    self.do_setup_motion()
-    self.movebase()
+    # self.do_setup_motion()
+    # self.movebase()
 
   def do_setup_motion(self, line=""):
     self.left_arm, self.right_arm = movement.setup_motion()
@@ -234,6 +238,40 @@ class MainLoop(cmd.Cmd):
                            ingredient.position_left_arm[2])) 
       else:
         print (ingredient.name + " is not found")
+
+  def do_rotate_wrist(self, line):
+    """ rotate_wrist arm delta
+        Rotates given wrist by delta (.5~.05)
+    """
+    args = line.split()
+    if(len(args) != 2):
+      print("Invalid arguments")
+      return
+    arm, delta = args
+    if arm == "right":
+      rotate_right_wrist(float(delta))
+    elif arm == "left":
+      rotate_left_wrist(float(delta))
+    else:
+      print("Please enter valid wrist")
+
+  def do_save_wrist(self, line):
+    """ save_wrist arm
+        remembers current wrist state for restoring later
+    """
+    if line in ['right', 'left']:
+      save_state(line)
+    else:
+      print("Please enter valid wrist")
+
+  def do_restore_wrist(self, line):
+    """ restore_wrist arm delta
+        restores wrist to saved state
+    """
+    if line in ['right', 'left']:
+      restore_state(line)
+    else:
+      print("Please enter valid wrist")
 
   def do_show_right_arm_ingredients(self, line):
     """Displays all ingredients seen by right arm_camera
@@ -396,7 +434,7 @@ class MainLoop(cmd.Cmd):
     y = float(y)
     z = float(z)
     #right arm is broken
-    grab_arm = self.left_arm
+    grab_arm = self.right_arm
     """
     if arm == "left":
       grab_arm = self.left_arm
@@ -446,11 +484,16 @@ class MainLoop(cmd.Cmd):
       print("Please tell me a cup to grab")
 
   def do_pour(self, line):
-    """Pours a grabbed cup.
+    """Pours x grams of liquid
     """
+    try:
+      float(line)
+    except ValueError:
+      print("Invalid argument")
+      return
     self.report("pouring")
     print("weight: {}".format(self.get_weight()))
-    self.pour(.5)
+    self.pour(float(line))
 
   def do_return(self, line):
     """Returns a grabbed cup to its original position.
@@ -489,25 +532,63 @@ class MainLoop(cmd.Cmd):
     """
     print((action + ' cup: {}').format(self.grabbed_cup))
 
-  def pour(self, percent, name="nomnom", delta=5.):
-    total_weight = self.ingredient_weights[name]
+  def do_show_scale(self, line):
+    """Prints current scale value
+    """
+    print("Current scale weight is {} grams".format(self.get_weight()))
+
+  # Sleep for x seconds in increments of 10 ms, unless there is has been weight change of more than 5 grams
+  def sleep_and_measure(self, sleep_duration, threshold=2):
+    start = time.time()
+    last_weight = self.get_weight()
+    while(abs(time.time() - start) < sleep_duration):
+      current = self.get_weight()
+      print("current {} last {}".format(current, last_weight))
+      if abs(last_weight - current) >= threshold:
+        print("Poured more than 2 grams")
+        self.do_rotate_wrist("right {}".format(.1))
+        time.sleep(1.5)
+        return True
+      last_weight = current
+      time.sleep(0.01)
+    return False
+
+  def pour(self, weight=60, delta=5.):
+    self.do_save_wrist("right")
+    total_weight = weight
     current = self.get_weight()
-    target = current + percent * total_weight
+    last_weight = current
+    target = current + total_weight
     diff = target - current
-    max_count = 1
+    max_count = 50
+    inc = -.05
+    sleep_duration = .5
+    last_change = 0
     while diff > delta and max_count > 0:
-      diff_percent = .8 * diff / total_weight
-      diff_theta = math.atan(2 * CUP_HEIGHT * diff_percent / CUP_WIDTH)
+      #diff_percent = .8 * diff / total_weight
+      #diff_theta = math.atan(2 * CUP_HEIGHT * diff_percent / CUP_WIDTH)
       # Rotate cup by theta
-      print("increasing theta by: {}".format(diff_theta))
-      self.cup_theta += diff_theta
+      print("Rotating")
+      self.do_rotate_wrist("right {}".format(inc))
+      #print("increasing theta by: {}".format(diff_theta))
+      #self.cup_theta += diff_theta
 
       current = self.get_weight()
       diff = target - current
+      # If there's less than 10% of goal to go, slow down
+      if abs(target-current) < total_weight * .10:
+        inc = -.02
+        sleep_duration = 1
+        print("I am almost there")
+      # If there's been any changes more than 5 grams, pull back then slow down 
+      if(self.sleep_and_measure(sleep_duration)):
+        sleep_duration = 1
+        inc = -.02
       max_count -= 1
 
     # reset cup orientation
     self.cup_theta = 0
+    self.do_restore_wrist("right")
 
 if __name__ == '__main__':
   MainLoop().cmdloop()

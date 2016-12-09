@@ -1,13 +1,18 @@
 # Ingredients List
 ingredient_list = [
-    ("Sugar", "ar_marker_1"),
-    ("Milk", "ar_marker_14"),
-    ("Tea", "ar_marker_13"),
-    ("Mango", "ar_marker_10")
+    ("Sugar", "ar_marker_0"),
+    ("Milk", "ar_marker_1"),
+    ("Tea", "ar_marker_2"),
+    ("Tea", "ar_marker_3"),
+    ("Tea", "ar_marker_4"),
+    ("Tea", "ar_marker_5"),
+    ("Tea", "ar_marker_6"),
+    ("Tea", "ar_marker_7"),
+    ("Tea", "ar_marker_8"),
 ]
 
 # Menu List
 menu_list = {
-    "Milk Tea": {"Sugar": 10, "Milk": 5, "Tea": 3},
-    "Mango Tea": {"Sugar": 10, "Mango": 5, "Tea": 3}
+    "Milk Tea": {"Sugar": 50, "Milk": 50, "Tea": 50},
+    "Sweet Milk Tea": {"Sugar": 50, "Milk": 50, "Tea": 50}
 }
