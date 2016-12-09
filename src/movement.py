@@ -80,7 +80,9 @@ def move_steps(arm, steps):
     print "addng waypoint: {}".format(step)
     waypoints.append(create_goal(step))
   plan, fraction = arm.compute_cartesian_path(waypoints, DELTA, 0.)
+  arm.set_path_constraints(create_constraint(arm.get_end_effector_link()))
   arm.execute(plan)
+  arm.clear_path_constraints()
 
 def move(arm, position, constrained=False):
   goal = create_goal(position)
