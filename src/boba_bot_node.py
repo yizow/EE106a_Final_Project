@@ -267,10 +267,54 @@ class MainLoop(cmd.Cmd):
     movement.move_forward(arm, position)
 
   def do_backward(self, line):
+    """ Moves the given arm backwards.
+        If no arm, or an invalid arm, is given, move the right arm.
+        Valid arms are "left" or "right"
+    """
     arm, position = self.get_arm(line)
     if arm == None:
       return
     movement.move_backward(arm, position)
+
+  def do_up(self, line):
+    """ Moves the given arm up.
+        If no arm, or an invalid arm, is given, move the right arm.
+        Valid arms are "left" or "right"
+    """
+    arm, position = self.get_arm(line)
+    if arm == None:
+      return
+    movement.move_up(arm, position)
+
+  def do_down(self, line):
+    """ Moves the given arm down.
+        If no arm, or an invalid arm, is given, move the right arm.
+        Valid arms are "left" or "right"
+    """
+    arm, position = self.get_arm(line)
+    if arm == None:
+      return
+    movement.move_down(arm, position)
+
+  def do_out(self, line):
+    """ Moves the given arm out.
+        If no arm, or an invalid arm, is given, move the right arm.
+        Valid arms are "left" or "right"
+    """
+    arm, position = self.get_arm(line)
+    if arm == None:
+      return
+    movement.move_out(arm, position)
+
+  def do_in(self, line):
+    """ Moves the given arm in.
+        If no arm, or an invalid arm, is given, move the right arm.
+        Valid arms are "left" or "right"
+    """
+    arm, position = self.get_arm(line)
+    if arm == None:
+      return
+    movement.move_in(arm, position)
 
   def get_arm(self, line):
     if line == "right":
@@ -292,19 +336,19 @@ class MainLoop(cmd.Cmd):
     """ Optional wait_time float argument can be given.
     If given, waits that long before executing the rest of the demo.
     The demo consists of resetting both arms, then moving the right
-    arm forwards, then backwards, then resetting both arms again.
+    arm forwards, then up, then out, then in, then down, then backwards,
+    then resetting both arms again.
     """
     if line != "":
       # Pause before executing to get setup for video
       wait_time = float(line)
       rospy.sleep(wait_time)
 
-    self.do_reset("")
-    rospy.sleep(1)
-    self.do_forward("right")
-    rospy.sleep(1)
-    self.do_backward("right")
-    self.do_reset("")
+    arm = "right"
+    cmd_list = [self.do_reset, self.do_forward, self.do_up, self.do_out, self.do_in, self.do_down, self.do_backward, self.do_reset]
+    for cmd in cmd_list:
+      cmd(arm)
+      rospy.sleep(1)
 
   def do_show_menu(self, line):
     """Display available menu"""
