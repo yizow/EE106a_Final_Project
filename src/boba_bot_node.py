@@ -106,7 +106,7 @@ class MainLoop(cmd.Cmd):
 
     self.grabbed_cup = None
     self.cup_theta = 0
-    self.ingredient_weights = {"nomnom": 20.}
+    self.ingredient_weights = {"nomnom": 400.}
 
     self.do_setup_motion("")
     self.do_reset("")
