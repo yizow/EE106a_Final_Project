@@ -44,6 +44,10 @@ class Ingredient():
     self.quat_left_arm = None
     self.last_seen_left_arm = None
 
+    self.position_right_arm = None
+    self.quat_right_arm = None
+    self.last_seen_right_arm = None
+
     self.raw = None
 def setup_ingredients():
   print ("Setting up ingredients...")
@@ -82,6 +86,14 @@ def tf_callback(data):
         ing.last_seen_left_arm = time.time()
         ing.position_left_arm = (trans.translation.x, trans.translation.y, trans.translation.z)
         ing.quad_left_arm = (trans.rotation.x, trans.rotation.y, trans.rotation.z)
+      if frame_id == "/right_hand_camera":
+        ing = ar_to_ingredient(child_frame)
+        if not ing:
+          return
+        trans = data.transforms[0].transform
+        ing.last_seen_right_arm = time.time()
+        ing.position_right_arm = (trans.translation.x, trans.translation.y, trans.translation.z)
+        ing.quad_right_arm = (trans.rotation.x, trans.rotation.y, trans.rotation.z)
 
 class MainLoop(cmd.Cmd):
   """REPL for executing various Baxter actions.
@@ -210,16 +222,29 @@ class MainLoop(cmd.Cmd):
       else:
         print(ingredient.name + " is not found")
 
-  def do_show_arm_ingredients(self, line):
-    """Displays all ingredients seen by arm_camera
+  def do_show_left_arm_ingredients(self, line):
+    """Displays all ingredients seen by left arm_camera
     """
     print("Displaying all ingredients that arm sees:")
     for ingredient in ingredients.values():
       # If the cup has been seen less than a second ago, consider still visible
-      if ingredient.last_seen_left_arm:# and time.time() - ingredient.last_seen_left_arm < 1:
+      if ingredient.last_seen_left_arm and time.time() - ingredient.last_seen_left_arm < 1:
         print(ingredient.name + " is located at ({}, {}, {})".format(ingredient.position_left_arm[0],   
                      ingredient.position_left_arm[1], 
                            ingredient.position_left_arm[2])) 
+      else:
+        print (ingredient.name + " is not found")
+
+  def do_show_right_arm_ingredients(self, line):
+    """Displays all ingredients seen by right arm_camera
+    """
+    print("Displaying all ingredients that arm sees:")
+    for ingredient in ingredients.values():
+      # If the cup has been seen less than a second ago, consider still visible
+      if ingredient.last_seen_left_arm and time.time() - ingredient.last_seen_left_arm < 1:
+        print(ingredient.name + " is located at ({}, {}, {})".format(ingredient.position_right_arm[0],   
+                     ingredient.position_right_arm[1], 
+                           ingredient.position_right_arm[2])) 
       else:
         print (ingredient.name + " is not found")
 
