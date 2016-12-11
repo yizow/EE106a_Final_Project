@@ -129,40 +129,10 @@ class MainLoop(cmd.Cmd):
 
     self.do_setup_motion("")
     self.do_reset("")
-    self.do_robot_init("")
 
   #---------------# 
   # INIT COMMANDS #
   #---------------# 
-
-  def do_robot_init(self, line):
-    #get the head/base transform
-    tfBuffer = tf2_ros.Buffer()
-    listener2 = tf2_ros.TransformListener(tfBuffer)
-    self.listener = tf.TransformListener()
-    while True:
-      try:
-        time.sleep(2)
-        #tinme = listener.getLatestCommonTime('base', 'ar_marker_1/corrected')
-        #self.trans = tfBuffer.lookup_transform('base', 'ar_marker_1/corrected', tinme, rospy.Duration(12.00000))
-        self.trans = tfBuffer.lookup_transform('base', 'head_camera', rospy.Time(0), rospy.Duration(12.0))
-        #self.trans = self.listener.lookupTransform('base', 'ar_marker_1/corrected', rospy.Time(0))
-        #print self.trans
-        rot = self.trans.transform.rotation
-        trs = self.trans.transform.translation
-        #print rot
-        exp = eqf.quaternion_to_exp(np.array([rot.x, rot.y, rot.z, rot.w]))
-        #print exp
-        rbt = eqf.create_rbt(exp[0], exp[1], np.array([trs.x, trs.y, trs.z]))
-        #print rbt
-        self.rbt = rbt
-        #print dir(listener)
-        break
-      except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
-        rospy.sleep(2)
-
-    # self.do_setup_motion()
-    # self.movebase()
 
   def do_setup_motion(self, line=""):
     self.left_arm, self.right_arm = movement.setup_motion()
@@ -170,42 +140,6 @@ class MainLoop(cmd.Cmd):
   #-------------------# 
   # MOVEMENT COMMANDS #
   #-------------------# 
-
-  def movebase(self):
-    #move arm to base position away from cameras
-    #base_location = [.22,.88,.5]
-    base_location = [.6, 1.2, .34]
-    base_plan = self.plan_path(self.left_arm, base_location, [0,0,0])
-    while not self.left_arm.execute(base_plan):
-      base_plan = self.plan_path(self.left_arm, base_location+[.1*np.random.random(), 0 , .1*np.random.random()], [0,0,0])
-
-  def plan_path(self, grab_arm, base_coord, offset):
-    goal_1 = PoseStamped()
-    goal_1.header.frame_id = "base"
-
-    #x, y, and z position
-    goal_1.pose.position.x = base_coord[0] + offset[0]
-    goal_1.pose.position.y = base_coord[1] + offset[1]
-    goal_1.pose.position.z = base_coord[2] + offset[2]
-    
-    #Orientation as a quaternion
-    goal_1.pose.orientation.x = 0.0
-    goal_1.pose.orientation.y = 2**.5/2
-    goal_1.pose.orientation.z = 0.0
-    goal_1.pose.orientation.w = 2**.5/2
-
-    #Set the goal state to the pose you just defined
-    grab_arm.set_pose_target(goal_1)
-
-    #Set the start state for the left arm
-    grab_arm.set_start_state_to_current_state()
-
-    #Plan a path
-    grab_plan = grab_arm.plan()
-    return grab_plan
-
-  def do_i(self, line):
-    exec line
 
   def do_move(self, line):
     """ move arm x y z
@@ -249,57 +183,15 @@ class MainLoop(cmd.Cmd):
   def do_grab(self, args):
     """Moves Baxter's gripper to grab a cup.
     """
-    cup, arm, x, y, z= args.split(' ')
-    x = float(x)
-    y = float(y)
-    z = float(z)
-    #right arm is broken
-    grab_arm = self.right_arm
-    """
+    cup, arm = args.split(' ')
     if arm == "left":
       grab_arm = self.left_arm
     if arm == "right":
       grab_arm = self.right_arm
-    """
 
     if cup != "":
       self.grabbed_cup = cup
       self.report("grabbing")
-      print(cup + " is at ")
-      base_coord = self.convert_to_base(self.rbt, ingredients[cup].position_head)
-      print base_coord
-      offset = [x,y,z]
-      grab_plan = self.plan_path(grab_arm, base_coord, offset)
-      #Execute the plan
-      #raw_input('Press <Enter> to move the left arm to goal pose 1 (path constraints are never enforced during this motion): ')
-      path_found = grab_arm.execute(grab_plan)
-      if not path_found:
-        print "try new offset"
-        return
-    tf_offset = offset
-    while True:
-      print('down')
-      delta = .2
-      print tf_offset
-      while tf_offset[2] > .1:
-        rospy.sleep(1)
-        tf_offset[2] -= delta
-        print tf_offset
-        grab_plan = self.plan_path(grab_arm, base_coord, tf_offset)
-        path_found = grab_arm.execute(grab_plan)
-        if not path_found:
-          print "try new offset"
-          return
-
-      print 'up'
-      while tf_offset[2] < offset[2]:
-        rospy.sleep(1)
-        tf_offset[2] += delta
-        grab_plan = self.plan_path(grab_arm, base_coord, tf_offset)
-        path_found = grab_arm.execute(grab_plan)
-        if not path_found:
-          print "try new offset"
-          return
     else:
       print("Please tell me a cup to grab")
 
@@ -538,11 +430,6 @@ class MainLoop(cmd.Cmd):
     for ingredient in ingredients.values():
        print(ingredient.name)
 
-  def convert_to_base(self, rbt, ingredient_position):
-    x1 = np.array([ingredient_position[i] for i in range(3)] + [1])
-    base_coord = self.rbt.dot(x1.reshape(4,1)).getA().flatten()
-    return base_coord
-
   def do_show_head_ingredients(self, line):
     """Displays all ingredients seen by head_camera
     """
@@ -553,20 +440,6 @@ class MainLoop(cmd.Cmd):
         print(ingredient.name + " is located at ({}, {}, {})".format(ingredient.position_head[0],
                      ingredient.position_head[1],
                            ingredient.position_head[2]))
-      else:
-        print(ingredient.name + " is not found")
-
-  def do_show_base_ingredients(self, line):
-    """Displays all ingredients seen by head_camera wrt base
-    """
-    print("Displaying all ingredients that head sees:")
-    for ingredient in ingredients.values():
-      
-      # If the cup has been seen less than a second ago, consider still visible
-      if ingredient.last_seen_head and time.time() - ingredient.last_seen_head < 1:
-        base_coord = self.convert_to_base(self.rbt, ingredient.position_head)
-        print base_coord
-        print(ingredient.name + " is located at ({}, {}, {})".format(*[base_coord[i] for i in range(3)]))  
       else:
         print(ingredient.name + " is not found")
 
@@ -599,6 +472,9 @@ class MainLoop(cmd.Cmd):
   #---------------# 
   # MISC COMMANDS #
   #---------------# 
+
+  def do_i(self, line):
+    exec line
 
   def do_return(self, line):
     """Returns a grabbed cup to its original position.
