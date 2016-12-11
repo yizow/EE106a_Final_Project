@@ -9,12 +9,12 @@ import moveit_commander
 from moveit_msgs.msg import OrientationConstraint, Constraints
 from geometry_msgs.msg import PoseStamped
 
-DELTA = .2
+DELTA = .1
 
-X_MAX = .95
+X_MAX = 1.1
 X_MIN = .2
-Z_MAX = .95
-Z_MIN = .2
+Z_MAX = .4
+Z_MIN = .14
 # Y_MAX is the absolute value. The right arm uses negative y values
 Y_MAX = .8
 Y_MIN = .3
@@ -118,7 +118,7 @@ def move_in(arm, start):
   x, y, z = start
   minimum = math.copysign(Y_MIN, y)
   y_points = list(np.arange(y, minimum, math.copysign(DELTA, y)))
-  steps = [(x, y, z) for z in z_points]
+  steps = [(x, y, z) for y in y_points]
   # Make sure we end at a consistent location
   if steps[-1][1] != minimum:
     steps.append((x, minimum, z))
@@ -148,3 +148,8 @@ def move(arm, destination, constrained=False):
   plan = arm.plan()
 
   arm.execute(plan)
+
+  if constrained:
+    arm.clear_path_constraints()
+
+# Moveto 4 with constraints 

@@ -21,11 +21,13 @@ from geometry_msgs.msg import PoseStamped
 
 from conf import ingredient_list, menu_list
 from util import *
-from wrist_movement import save_state, restore_state, rotate_wrist, g_grab, g_open
+from wrist_movement import *
 
 import movement
 
 CORRECTED_KEYWORD = "/corrected"
+
+Z_OFFSET = .02
 
   #---------------# 
   # INGREDIENTS   #
@@ -120,16 +122,17 @@ class MainLoop(cmd.Cmd):
 
     # Setup tf Node
     self.tf = tf.TransformListener()
-    rospy.Subscriber("/tf", TFMessage, tf_callback)
-    setup_ingredients()
+    #rospy.Subscriber("/tf", TFMessage, tf_callback)
+    #setup_ingredients()
 
     self.grabbed_cup = None
     self.cup_theta = 0
     self.ingredient_weights = {"nomnom": 400.}
 
     self.do_setup_motion("")
-    self.do_reset("")
-
+    #self.do_reset("")
+    wrist_setup()
+    self.saved = {}
   #---------------# 
   # INIT COMMANDS #
   #---------------# 
@@ -176,6 +179,22 @@ class MainLoop(cmd.Cmd):
             "/base",
             "/{}_gripper".format(line),
             rospy.Time(0))[0]
+
+  def get_ar_position(self, line):
+    return self.tf.lookupTransform(
+            "/base",
+            "/ar_marker_{}/corrected".format(line),
+            rospy.Time(0))[0]  
+
+  def do_moveto(self, line):
+    ar_number = int(line)
+    if ar_number in self.saved:
+      position = self.saved[ar_number]
+    else:
+      pos_list = list(self.get_ar_position(ar_number))
+      pos_list[2] += .042
+      position = " ".join(map(str, pos_list))
+    self.do_move('left ' + position)
 
   def do_s(self, line):
     self.do_grab("Mango a 0 0 .3")
@@ -225,9 +244,17 @@ class MainLoop(cmd.Cmd):
         Valid arms are "left" or "right"
     """
     if line != "left":
+      self.do_open("right")
       self.do_move("right .2 -.6 .2")
     if line != "right":
+      self.do_open("left")
       self.do_move("left .2 .6 .2")
+    rospy.sleep(3)
+    for x in [0, 2, 3, 4]:
+      pos_list = list(self.get_ar_position(x))
+      pos_list[2] += Z_OFFSET
+      position = " ".join(map(str, pos_list))
+      self.saved[x] = position 
 
   def do_forward(self, line):
     """ Moves the given arm forward.
@@ -342,7 +369,7 @@ class MainLoop(cmd.Cmd):
     self.pour(weight=float(line))
 
   # Sleep for x seconds in increments of 10 ms, unless there is has been weight change of more than 5 grams
-  def sleep_and_measure(self, sleep_duration, arm='right', threshold=4):
+  def sleep_and_measure(self, sleep_duration, arm='left', threshold=4):
     start = time.time()
     last_weight = self.get_weight()
     while(abs(time.time() - start) < sleep_duration):
@@ -358,7 +385,7 @@ class MainLoop(cmd.Cmd):
       time.sleep(0.01)
     return False
 
-  def pour(self, weight=60, arm='right', delta=5.):
+  def pour(self, weight=60, arm='left', delta=15.):
     self.do_save_wrist(arm)
     total_weight = weight
     current = self.get_weight()
@@ -392,7 +419,7 @@ class MainLoop(cmd.Cmd):
 
     # reset cup orientation
     self.cup_theta = 0
-    self.do_restore_wrist("right")
+    self.do_restore_wrist(arm)
 
   #------------------#
   # GRIPPER COMMANDS #

@@ -61,9 +61,12 @@ def callback(data):
             pass
 
         br = tf.TransformBroadcaster()
+        corrected_time = rospy.Time.now()
+        corrected_time.secs = tim.secs
+        corrected_time.nsecs = tim.nsecs
         br.sendTransform((ndata.transforms[0].transform.translation.x, ndata.transforms[0].transform.translation.y, ndata.transforms[0].transform.translation.z),
         (quaternion.x, quaternion.y, quaternion.z, quaternion.w), 
-        rospy.Time.now(),
+        corrected_time,
         child_frame + "/corrected", "/head_camera")
 
 # Initializes listener for the TF and then closed_loop_pick
