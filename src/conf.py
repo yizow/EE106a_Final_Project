@@ -9,6 +9,8 @@ ingredient_list = [
     ("Tea", "ar_marker_6"),
     ("Tea", "ar_marker_7"),
     ("Tea", "ar_marker_8"),
+    ("Tea", "ar_marker_9"),
+    ("Tea", "ar_marker_10"),
 ]
 
 # Menu List

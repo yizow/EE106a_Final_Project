@@ -8,7 +8,7 @@
   <node name="head_camera" pkg="baxter_tools" type="camera_control.py" args="$(arg open) $(arg resolution)" />
 
   <!-- Setup Node -->
-  <arg name="marker_size" default="8.3" />
+  <arg name="marker_size" default="5.3" />
   <arg name="max_new_marker_error" default="0.2" />
   <arg name="max_track_error" default="0.2" />
   <arg name="cam_image_topic" default="/cameras/head_camera/image" />

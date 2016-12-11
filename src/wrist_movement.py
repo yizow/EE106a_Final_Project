@@ -43,12 +43,6 @@ right_limb = None
 left_gripper = None
 right_gripper = None
 
-""" Setup global interfaces """
-left_limb = baxter_interface.Limb('left')
-right_limb = baxter_interface.Limb('right')
-left_gripper = baxter_interface.Gripper('left')
-right_gripper = baxter_interface.Gripper('right')
-
 """ Wrist Rotation Functions """
 
 # Stores limb's wrist state in variable
@@ -79,6 +73,7 @@ def restore_state(limb_name):
 
   if(not saved_state[wrist_name]):
     print("{} has no saved state".format(limb_name))
+    return
   joints = limb.joint_names()
   delta = abs(limb.joint_angles()[wrist_name] - saved_state[wrist_name])
   start_time = time.time()
@@ -102,13 +97,21 @@ def rotate_wrist(wrist_name, delta):
   print(joint_command)
 
 
+""" Setup global interfaces """
+def wrist_setup():
+  global left_limb, right_limb, left_gripper, right_gripper
+  left_limb = baxter_interface.Limb('left')
+  right_limb = baxter_interface.Limb('right')
+  left_gripper = baxter_interface.Gripper('left')
+  right_gripper = baxter_interface.Gripper('right')
+
+
 """ Gripper Functions """
 
 # Open, calibrate, then close
 def g_grab(gripper_name):
   if(gripper_name in ['right', 'left']):
     g_open(gripper_name)
-    g_calibrate(gripper_name)
     g_close(gripper_name)
   else:
     print("No {} gripper".format(gripper_name))
@@ -140,11 +143,13 @@ def g_close(gripper_name):
   else:
     print("No {} gripper".format(gripper_name))
 
-def offset_holding(gripper, offset):
-  if gripper.type() != 'electric':
-    return
-  current = gripper.parameters()['holding_force']
-  gripper.set_holding_force(current + offset)
+def offset_holding(gripper_name, offset):
+  if(gripper_name == 'right'):
+    current = right_gripper.parameters()['holding_force']
+    right_gripper.set_holding_force(current + offset)
+  elif(gripper_name == 'left'):
+    current = left_gripper.parameters()['holding_force']
+    left_gripper.set_holding_force(current + offset)
 
 # Adjust holding strength by val
 def g_adj_hold(gripper_name, val):
