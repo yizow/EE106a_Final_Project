@@ -21,7 +21,7 @@ from geometry_msgs.msg import PoseStamped
 
 from conf import ingredient_list, menu_list
 from util import *
-from wrist_movement import save_state, restore_state, rotate_wrist, wrist_setup, g_grab, g_open
+from wrist_movement import save_state, restore_state, rotate_wrist, g_grab, g_open
 
 import movement
 
@@ -130,7 +130,6 @@ class MainLoop(cmd.Cmd):
     self.do_setup_motion("")
     self.do_reset("")
     self.do_robot_init("")
-    wrist_setup()
 
   #---------------# 
   # INIT COMMANDS #
@@ -305,9 +304,9 @@ class MainLoop(cmd.Cmd):
       print("Please tell me a cup to grab")
 
 
-  #---------------------# 
+  #---------------------#
   # LIN_MOTION COMMANDS #
-  #---------------------# 
+  #---------------------#
 
   def do_demo(self, line):
     """ Optional wait_time float argument can be given.
@@ -398,10 +397,10 @@ class MainLoop(cmd.Cmd):
       return
     movement.move_in(arm, position)
 
-  #-------------------------# 
+  #-------------------------#
   # WRIST ROTATION COMMANDS #
-  #-------------------------# 
- 
+  #-------------------------#
+
   def do_rotate_wrist(self, line):
     """ rotate_wrist arm delta
         Rotates given wrist by delta (.5~.05)
@@ -434,9 +433,9 @@ class MainLoop(cmd.Cmd):
     else:
       print("Please enter valid wrist")
 
-  #------------------# 
+  #------------------#
   # POURING COMMANDS #
-  #------------------# 
+  #------------------#
 
   def do_pour(self, line):
     """Pours x grams of liquid
@@ -493,7 +492,7 @@ class MainLoop(cmd.Cmd):
         inc = -.01
         sleep_duration = 1
         print("I am almost there")
-      # If there's been any changes more than 2 grams, pull back then slow down 
+      # If there's been any changes more than 2 grams, pull back then slow down
       if(self.sleep_and_measure(sleep_duration, arm=arm)):
         sleep_duration = 1
         inc = -.02
@@ -503,27 +502,27 @@ class MainLoop(cmd.Cmd):
     self.cup_theta = 0
     self.do_restore_wrist("right")
 
-  #------------------# 
+  #------------------#
   # GRIPPER COMMANDS #
-  #------------------# 
+  #------------------#
 
   def do_grip(self, line):
     """ Grips cup for a given arm """
     if(line not in ['right', 'left']):
       print("Invalid argument")
       return
-    g_grab(line)    
+    g_grab(line)
 
   def do_open(self, line):
     """ Release cup for a given arm """
     if(line not in ['right', 'left']):
       print("Invalid argument")
       return
-    g_open(line)    
+    g_open(line)
 
-  #------------------------------# 
+  #------------------------------#
   # MENU/INGRED/STATUS  COMMANDS #
-  #------------------------------# 
+  #------------------------------#
 
   def do_show_scale(self, line):
     """ Prints current scale value """
@@ -552,11 +551,11 @@ class MainLoop(cmd.Cmd):
       # If the cup has been seen less than a second ago, consider still visible
       if ingredient.last_seen_head and time.time() - ingredient.last_seen_head < 1:
         print(ingredient.name + " is located at ({}, {}, {})".format(ingredient.position_head[0],
-                     ingredient.position_head[1], 
-                           ingredient.position_head[2]))  
+                     ingredient.position_head[1],
+                           ingredient.position_head[2]))
       else:
-        print(ingredient.name + " is not found") 
-  
+        print(ingredient.name + " is not found")
+
   def do_show_base_ingredients(self, line):
     """Displays all ingredients seen by head_camera wrt base
     """

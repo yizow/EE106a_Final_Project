@@ -27,7 +27,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-# We used the examples joint_position_keyboard.py and gripper_keyboard from baxter examples 
+# We used the examples joint_position_keyboard.py and gripper_keyboard from baxter examples
 # to help model these functions
 import time
 import rospy
@@ -36,12 +36,18 @@ from baxter_interface import CHECK_VERSION
 
 saved_state = {'right_w2': None, 'left_w2': None}
 ERROR = 0.02
-TIMEOUT = 5  
+TIMEOUT = 5
 W2_INDEX = 6
 left_limb = None
 right_limb = None
 left_gripper = None
 right_gripper = None
+
+""" Setup global interfaces """
+left_limb = baxter_interface.Limb('left')
+right_limb = baxter_interface.Limb('right')
+left_gripper = baxter_interface.Gripper('left')
+right_gripper = baxter_interface.Gripper('right')
 
 """ Wrist Rotation Functions """
 
@@ -55,7 +61,7 @@ def save_state(limb_name):
     wrist_name = 'left_w2'
   else:
     print("Please enter valid name")
-    return 
+    return
   saved_state[wrist_name] = limb.joint_angles()[wrist_name]
   print("{} saved to {}".format(limb_name, saved_state[wrist_name]))
 
@@ -69,8 +75,8 @@ def restore_state(limb_name):
     wrist_name = 'left_w2'
   else:
     print("Please enter valid name")
-    return  
-  
+    return
+
   if(not saved_state[wrist_name]):
     print("{} has no saved state".format(limb_name))
   joints = limb.joint_names()
@@ -143,16 +149,8 @@ def offset_holding(gripper, offset):
 # Adjust holding strength by val
 def g_adj_hold(gripper_name, val):
   if(gripper_name == 'right'):
-    offset_holding(right_gripper, val) 
+    offset_holding(right_gripper, val)
   elif(gripper_name == 'left'):
-    offset_holding(left_gripper, val) 
+    offset_holding(left_gripper, val)
   else:
     print("No {} gripper".format(gripper_name))
-
-""" Setup global interfaces """
-def wrist_setup():
-  global left_limb, right_limb, left_gripper, right_gripper
-  left_limb = baxter_interface.Limb('left')
-  right_limb = baxter_interface.Limb('right')
-  left_gripper = baxter_interface.Gripper('left')
-  right_gripper = baxter_interface.Gripper('right')
