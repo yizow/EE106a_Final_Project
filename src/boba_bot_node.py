@@ -27,7 +27,7 @@ import movement
 
 CORRECTED_KEYWORD = "/corrected"
 
-Z_OFFSET = .02
+Z_OFFSET = .015
 
   #---------------# 
   # INGREDIENTS   #
@@ -220,9 +220,11 @@ class MainLoop(cmd.Cmd):
       print("Cant find ar number: {}".format(ar_number))
       return
 
-    arm = self.get_arm(arm_name)
-    for axis in ['z', 'x', 'y']:
-      movement.move_steps_axis(arm, self.get_position(arm_name), position, axis)
+    arm, arm_position = self.get_arm(arm_name)
+    for axis in ['z', 'x', 'y', 'z']:
+      print "arm_position"
+      print arm_name, arm_position, axis
+      arm_position = movement.move_steps_axis(arm, arm_position, position, axis)
 
   def do_moveto_shift(self, line):
     """Assumes you are currently grabbing a cup. Raises the cup,
@@ -236,10 +238,21 @@ class MainLoop(cmd.Cmd):
       ar_number = int(args[0])
       arm_name = 'left'
 
-    arm = self.get_arm(arm_name)
+    if ar_number in self.saved:
+      position = self.saved[ar_number]
+    else:
+      print("Cant find ar number: {}".format(ar_number))
+      return
+
     self.do_up(arm_name)
-    movement.move_steps_axis(arm, self.get_position(arm_name), position, 'y')
-    movement.move_steps_axis(arm, self.get_position(arm_name), position, 'z')
+    rospy.sleep(2)
+    arm, arm_position = self.get_arm(arm_name)
+    print arm_position, position
+    print("moving to y")
+    arm_position = movement.move_steps_axis(arm, arm_position, position, 'y')
+    print("moving to z")
+    arm_position[2] += 3*Z_OFFSET
+    movement.move_steps_axis(arm, arm_position, position, 'z')
 
   def do_grab(self, args):
     """Moves Baxter's gripper to grab a cup.
@@ -265,12 +278,17 @@ class MainLoop(cmd.Cmd):
     self.do_moveto_constrained('2')
     self.do_forward(arm_name)
     self.do_grip(arm_name)
-    self.up(arm_name)
+    self.do_up(arm_name)
     self.do_moveto_shift('4')
     self.do_moveto_shift('2')
     self.do_open(arm_name)
     self.do_moveto_constrained('2')
     self.do_reset('')
+
+  def do_moveto_demo(self, line):
+  	arm_name = 'left'
+  	arm, position = self.get_arm(arm_name)
+  	movement.rotate(arm, position)
 
   #---------------------#
   # LIN_MOTION COMMANDS #
@@ -305,7 +323,7 @@ class MainLoop(cmd.Cmd):
     if line != "right":
       self.do_open("left")
       self.do_move("left .2 .6 .2")
-    rospy.sleep(3)
+    rospy.sleep(1)
 
     for x in [0, 2, 3, 4]:
       pos_list = list(self.get_ar_position(x))
@@ -450,7 +468,7 @@ class MainLoop(cmd.Cmd):
     target = current + total_weight
     diff = target - current
     max_count = 50
-    inc = -.05
+    inc = -.1
     sleep_duration = .5
     last_change = 0
     while diff > delta and max_count > 0:

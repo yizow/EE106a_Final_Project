@@ -130,7 +130,9 @@ def move_steps(arm, steps):
     print "moving to: {}".format(step)
     move(arm, step, True)
 
-def move_steps_axis(arm, start, goal, axis):
+def move_steps_axis(arm, start, destination, axis):
+  destination = destination.split()
+  destination = list([float(_) for _ in destination])
   def overwrite_axis(value):
     new_position = list(start)
     new_position[index] = value
@@ -139,17 +141,15 @@ def move_steps_axis(arm, start, goal, axis):
   axis_mapping = {'x': 0, 'y': 1, 'z': 2}
   index = axis_mapping[axis]
   x, y, z = start
-  delta = math.copysign(DELTA, goal[index] - start[index])
+  delta = math.copysign(DELTA, destination[index] - start[index])
 
-  axis_points = list(np.arange(start[index], goal[index], delta))
+  axis_points = list(np.arange(start[index], destination[index], delta))
   steps = [overwrite_axis(point) for point in axis_points]
-  if len(steps) > 0:
-    return
-  else:
-    if steps[-1][index] != goal[index]:
-      steps.append(overwrite_axis(goal[index]))
+  if len(steps) == 0:
+    steps = [overwrite_axis(destination[index])]
 
   move_steps(arm, steps)
+  return steps[-1]
 
 def move(arm, destination, constrained=False):
   goal = create_goal(destination)
@@ -173,4 +173,22 @@ def move(arm, destination, constrained=False):
   if constrained:
     arm.clear_path_constraints()
 
-# Moveto 4 with constraints
+def rotate(arm, destination):
+  goal = create_goal(destination)
+  goal.pose.orientation.x -= .5
+  goal.pose.orientation.z -= .5
+
+  set_goal_orientation(goal.pose)
+
+  #Set the goal state to the pose you just defined
+  arm.set_pose_target(goal)
+
+  #Set the start state for the left arm
+  arm.set_start_state_to_current_state()
+
+  # Constrain gripper to always point forwards
+
+  #Plan a path
+  plan = arm.plan()
+
+  arm.execute(plan)

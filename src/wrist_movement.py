@@ -92,8 +92,12 @@ def rotate_wrist(wrist_name, delta):
     return
   joint_name = limb.joint_names()[6]
   current_position = limb.joint_angle(joint_name)
-  joint_command = {joint_name: current_position + delta }
-  limb.set_joint_positions(joint_command)
+  current_position
+  new_position = current_position + delta
+  new_position = max(0, new_position)
+  new_position = min(3.1415, new_position)
+  joint_command = {joint_name: new_position }
+  limb.set_joint_positions(joint_command, raw=True)
   print(joint_command)
 
 
@@ -112,6 +116,7 @@ def wrist_setup():
 def g_grab(gripper_name):
   if(gripper_name in ['right', 'left']):
     g_open(gripper_name)
+    g_calibrate(gripper_name)
     g_close(gripper_name)
   else:
     print("No {} gripper".format(gripper_name))
