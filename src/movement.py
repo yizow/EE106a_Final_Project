@@ -58,7 +58,7 @@ def create_constraint(name):
   orien_const.absolute_x_axis_tolerance = 0.1;
   orien_const.absolute_y_axis_tolerance = 0.1;
   orien_const.absolute_z_axis_tolerance = 0.1;
-  orien_const.weight = 1.0;
+  orien_const.weight = 3.0;
   consts = Constraints()
   consts.orientation_constraints = [orien_const]
   return consts

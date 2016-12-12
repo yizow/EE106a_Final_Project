@@ -94,10 +94,10 @@ def rotate_wrist(wrist_name, delta):
   current_position = limb.joint_angle(joint_name)
   current_position
   new_position = current_position + delta
-  new_position = max(0, new_position)
-  new_position = min(3.1415, new_position)
+  # new_position = max(0, new_position)
+  # new_position = min(3.1415, new_position)
   joint_command = {joint_name: new_position }
-  limb.set_joint_positions(joint_command, raw=True)
+  limb.set_joint_positions(joint_command)
   print(joint_command)
 
 

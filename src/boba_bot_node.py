@@ -27,7 +27,7 @@ import movement
 
 CORRECTED_KEYWORD = "/corrected"
 
-Z_OFFSET = .015
+Z_OFFSET = .045
 
   #---------------# 
   # INGREDIENTS   #
@@ -221,7 +221,7 @@ class MainLoop(cmd.Cmd):
       return
 
     arm, arm_position = self.get_arm(arm_name)
-    for axis in ['z', 'x', 'y', 'z']:
+    for axis in ['x', 'y', 'z']:
       print "arm_position"
       print arm_name, arm_position, axis
       arm_position = movement.move_steps_axis(arm, arm_position, position, axis)
@@ -240,6 +240,9 @@ class MainLoop(cmd.Cmd):
 
     if ar_number in self.saved:
       position = self.saved[ar_number]
+      position = map(float, position.split())
+      position[2] += .05
+      position = "{} {} {}".format(position[0], position[1], position[2])
     else:
       print("Cant find ar number: {}".format(ar_number))
       return
@@ -330,6 +333,14 @@ class MainLoop(cmd.Cmd):
       pos_list[2] += Z_OFFSET
       position = " ".join(map(str, pos_list))
       self.saved[x] = position
+
+  def do_offset_z(self, line):
+    offset = float(line)
+    arm, position = self.get_arm('left')
+
+    destination = list(position)
+    destination[2] += offset
+    movement.move(arm, destination, True)
 
   def do_forward(self, line):
     """ Moves the given arm forward.
