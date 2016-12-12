@@ -139,6 +139,7 @@ class MainLoop(cmd.Cmd):
   #---------------# 
 
   def do_setup_motion(self, line=""):
+    """Sets self.left_arm and self.right_arm values."""
     self.left_arm, self.right_arm = movement.setup_motion()
 
   #-------------------# 
@@ -188,6 +189,10 @@ class MainLoop(cmd.Cmd):
             rospy.Time(0))[0]
 
   def do_moveto(self, line):
+    """Positions the gripper a z-axis offset above the ar_marker.
+    The position is saved during do_reset. If the ar_marker was
+    not saved, we get it's position and save it.
+    """
     ar_number = int(line)
     if ar_number in self.saved:
       position = self.saved[ar_number]
@@ -198,6 +203,10 @@ class MainLoop(cmd.Cmd):
     self.do_move('left ' + position)
 
   def do_moveto_constrained(self, line):
+    """Positions the gripper a z-axis offset above the ar_marker.
+    Follows a linear path, moving only in the z, x, y-axes, sequentially.
+    These paths have orientation constraints on them.
+    """
     args = line.split()
     if len(args) > 1:
       ar_number, arm_name = args
@@ -216,6 +225,10 @@ class MainLoop(cmd.Cmd):
       movement.move_steps_axis(arm, self.get_position(arm_name), position, axis)
 
   def do_moveto_shift(self, line):
+    """Assumes you are currently grabbing a cup. Raises the cup,
+    shifts y-axis to destination ar_marker, then shifts z-axis to
+    destination ar_marker.
+    """
     args = line.split()
     if len(args) > 1:
       ar_number, arm_name = args
@@ -244,6 +257,10 @@ class MainLoop(cmd.Cmd):
       print("Please tell me a cup to grab")
 
   def do_moveto_demo(self, line):
+    """Chains together a series of commands. We pick up
+    ar_marker_2, then reposition it to pouring position above ar_marker_4,
+    and finally return the cup to its original position.
+    """
     arm_name = 'left'
     self.do_moveto_constrained('2')
     self.do_forward(arm_name)
