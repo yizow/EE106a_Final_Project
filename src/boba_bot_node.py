@@ -215,6 +215,19 @@ class MainLoop(cmd.Cmd):
     for axis in ['z', 'x', 'y']:
       movement.move_steps_axis(arm, self.get_position(arm_name), position, axis)
 
+  def do_moveto_shift(self, line):
+    args = line.split()
+    if len(args) > 1:
+      ar_number, arm_name = args
+    else:
+      ar_number = int(args[0])
+      arm_name = 'left'
+
+    arm = self.get_arm(arm_name)
+    self.do_up(arm_name)
+    movement.move_steps_axis(arm, self.get_position(arm_name), position, 'y')
+    movement.move_steps_axis(arm, self.get_position(arm_name), position, 'z')
+
   def do_grab(self, args):
     """Moves Baxter's gripper to grab a cup.
     """
@@ -230,6 +243,17 @@ class MainLoop(cmd.Cmd):
     else:
       print("Please tell me a cup to grab")
 
+  def do_moveto_demo(self, line):
+    arm_name = 'left'
+    self.do_moveto_constrained('2')
+    self.do_forward(arm_name)
+    self.do_grip(arm_name)
+    self.up(arm_name)
+    self.do_moveto_shift('4')
+    self.do_moveto_shift('2')
+    self.do_open(arm_name)
+    self.do_moveto_constrained('2')
+    self.do_reset('')
 
   #---------------------#
   # LIN_MOTION COMMANDS #
@@ -252,7 +276,6 @@ class MainLoop(cmd.Cmd):
     for cmd in cmd_list:
       cmd(arm)
       rospy.sleep(1)
-
 
   def do_reset(self, line):
     """ Resets the given arm to starting position.
