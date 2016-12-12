@@ -1,0 +1,70 @@
+turn on scale
+setup.sh
+run boba_bot_node
+
+Verify we can see all ar tags
+reset
+grip left
+open left
+check wrist
+
+******* TARE SCALE *******
+
+moveto_constrained 2
+moveto 2
+wait a couple seconds
+forward left
+
+******* TARE SCALE *******
+
+offset_z {value} (optional) (usually +-.01)
+
+******* TARE SCALE *******
+
+grip left
+moveto_shift 3
+
+******* TARE SCALE *******
+
+adjust wrist
+insert ingredients
+pour 100
+
+moveto_shift 2
+offset_z -.05
+open left
+moveto 2
+
+******* TARE SCALE *******
+
+moveto 0
+wait a couple seconds
+forward left
+
+******* TARE SCALE *******
+
+offset_z {value} (optional) (usually +-.01)
+
+******* TARE SCALE *******
+
+grip left
+moveto_shift 3
+
+******* TARE SCALE *******
+
+adjust wrist
+insert ingredients
+pour 100
+
+moveto_shift 0
+offset_z -.05
+open left
+
+moveto 0
+
+moveto 2
+
+reset
+
+bow
+cry horribly over spilt skittles
