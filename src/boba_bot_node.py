@@ -197,6 +197,24 @@ class MainLoop(cmd.Cmd):
       position = " ".join(map(str, pos_list))
     self.do_move('left ' + position)
 
+  def do_moveto_constrained(self, line):
+    args = line.split()
+    if len(args) > 1:
+      ar_number, arm_name = args
+    else:
+      ar_number = int(args[0])
+      arm_name = 'left'
+
+    if ar_number in self.saved:
+      position = self.saved[ar_number]
+    else:
+      print("Cant find ar number: {}".format(ar_number))
+      return
+
+    arm = self.get_arm(arm_name)
+    for axis in ['z', 'x', 'y']:
+      movement.move_steps_axis(arm, self.get_position(arm_name), position, axis)
+
   def do_grab(self, args):
     """Moves Baxter's gripper to grab a cup.
     """

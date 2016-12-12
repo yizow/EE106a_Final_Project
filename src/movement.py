@@ -130,6 +130,27 @@ def move_steps(arm, steps):
     print "moving to: {}".format(step)
     move(arm, step, True)
 
+def move_steps_axis(arm, start, goal, axis):
+  def overwrite_axis(value):
+    new_position = list(start)
+    new_position[index] = value
+    return new_position
+
+  axis_mapping = {'x': 0, 'y': 1, 'z': 2}
+  index = axis_mapping[axis]
+  x, y, z = start
+  delta = math.copysign(DELTA, goal[index] - start[index])
+
+  axis_points = list(np.arange(start[index], goal[index], delta))
+  steps = [overwrite_axis(point) for point in axis_points]
+  if len(steps) > 0:
+    return
+  else:
+    if steps[-1][index] != goal[index]:
+      steps.append(overwrite_axis(goal[index]))
+
+  move_steps(arm, steps)
+
 def move(arm, destination, constrained=False):
   goal = create_goal(destination)
   set_goal_orientation(goal.pose)
