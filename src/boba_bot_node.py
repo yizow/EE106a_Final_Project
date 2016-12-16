@@ -27,7 +27,7 @@ import movement
 
 CORRECTED_KEYWORD = "/corrected"
 
-Z_OFFSET = .045
+Z_OFFSET = .05
 
   #---------------# 
   # INGREDIENTS   #
@@ -241,7 +241,8 @@ class MainLoop(cmd.Cmd):
     if ar_number in self.saved:
       position = self.saved[ar_number]
       position = map(float, position.split())
-      position[2] += .05
+      if ar_number == 3:
+      	position[2] += .1
       position = "{} {} {}".format(position[0], position[1], position[2])
     else:
       print("Cant find ar number: {}".format(ar_number))
@@ -293,6 +294,16 @@ class MainLoop(cmd.Cmd):
   	arm, position = self.get_arm(arm_name)
   	movement.rotate(arm, position)
 
+  def do_part1(self, line):
+    self.do_moveto_constrained('2')
+    self.do_moveto('2')
+    rospy.sleep(4)
+    self.do_forward('left')
+    self.do_grip('left')
+    rospy.sleep(2)
+    self.do_moveto_shift('3')
+
+
   #---------------------#
   # LIN_MOTION COMMANDS #
   #---------------------#
@@ -321,9 +332,11 @@ class MainLoop(cmd.Cmd):
         Valid arms are "left" or "right"
     """
     if line != "left":
+      self.do_grip("right")
       self.do_open("right")
       self.do_move("right .2 -.6 .2")
     if line != "right":
+      self.do_grip("left")
       self.do_open("left")
       self.do_move("left .2 .6 .2")
     rospy.sleep(1)

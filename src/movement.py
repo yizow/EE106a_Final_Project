@@ -11,7 +11,7 @@ from geometry_msgs.msg import PoseStamped
 
 DELTA = .1
 
-X_MAX = 1.1
+X_MAX = .9
 X_MIN = .2
 Z_MAX = .4
 Z_MIN = .14
