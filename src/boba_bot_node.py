@@ -27,7 +27,7 @@ import movement
 
 CORRECTED_KEYWORD = "/corrected"
 
-Z_OFFSET = .05
+Z_OFFSET = .04
 
   #---------------# 
   # INGREDIENTS   #
@@ -242,7 +242,9 @@ class MainLoop(cmd.Cmd):
       position = self.saved[ar_number]
       position = map(float, position.split())
       if ar_number == 3:
-      	position[2] += .1
+        position[2] += .1 + Z_OFFSET
+      else:
+        position[2] -= .05
       position = "{} {} {}".format(position[0], position[1], position[2])
     else:
       print("Cant find ar number: {}".format(ar_number))
@@ -255,7 +257,6 @@ class MainLoop(cmd.Cmd):
     print("moving to y")
     arm_position = movement.move_steps_axis(arm, arm_position, position, 'y')
     print("moving to z")
-    arm_position[2] += 3*Z_OFFSET
     movement.move_steps_axis(arm, arm_position, position, 'z')
 
   def do_grab(self, args):
@@ -290,9 +291,9 @@ class MainLoop(cmd.Cmd):
     self.do_reset('')
 
   def do_moveto_demo(self, line):
-  	arm_name = 'left'
-  	arm, position = self.get_arm(arm_name)
-  	movement.rotate(arm, position)
+    arm_name = 'left'
+    arm, position = self.get_arm(arm_name)
+    movement.rotate(arm, position)
 
   def do_part1(self, line):
     self.do_moveto_constrained('2')
@@ -300,7 +301,23 @@ class MainLoop(cmd.Cmd):
     rospy.sleep(4)
     self.do_forward('left')
     self.do_grip('left')
+    rospy.sleep(4)
+    self.do_moveto_shift('3')
+    rospy.sleep(3)
+
+  def do_part2(self, line):
+    self.do_moveto_shift('2')
     rospy.sleep(2)
+    self.do_open('left')
+    rospy.sleep(2)
+    self.do_moveto('2')
+    rospy.sleep(2)
+    self.do_moveto_constrained('0')
+    self.do_moveto('0')
+    rospy.sleep(4)
+    self.do_forward('left')
+    self.do_grip('left')
+    rospy.sleep(4)
     self.do_moveto_shift('3')
 
 
