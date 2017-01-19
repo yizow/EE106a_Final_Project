@@ -126,9 +126,14 @@ def move_in(arm, start):
   move_steps(arm, steps)
 
 def move_steps(arm, steps):
+  waypoints = []
   for step in steps:
-    print "moving to: {}".format(step)
-    move(arm, step, True)
+    print "addng waypoint: {}".format(step)
+    waypoints.append(create_goal(step))
+  plan, fraction = arm.compute_cartesian_path(waypoints, DELTA, 0.)
+  arm.set_path_constraints(create_constraint(arm.get_end_effector_link()))
+  arm.execute(plan)
+  arm.clear_path_constraints()
 
 def move_steps_axis(arm, start, destination, axis):
   destination = destination.split()
